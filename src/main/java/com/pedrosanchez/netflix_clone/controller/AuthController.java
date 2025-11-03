@@ -39,8 +39,7 @@ public class AuthController {
 
         User newUser = new User();
         newUser.setUsername(user.getUsername());
-        // El prefijo {bcrypt} indica a Spring Security el algoritmo usado
-        newUser.setPassword("{bcrypt}" + encodedPassword);
+        newUser.setPassword(encodedPassword);
         newUser.setRole("USER");
 
         User savedUser = userRepository.save(newUser);
