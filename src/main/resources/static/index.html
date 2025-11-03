@@ -66,22 +66,22 @@
             Disfruta de películas ilimitadas. Inicia sesión o regístrate para acceder al catálogo.
         </p>
     </div>
-    
+
     <!-- MAIN CONTENT / MOVIE CATALOG - VISIBLE ONLY WHEN AUTHENTICATED -->
     <main id="main-content" class="p-8 hidden">
-        
+
         <!-- MOVIE MANAGEMENT FORM (Admin only) -->
         <section id="movie-form-section" class="bg-gray-800 p-6 rounded-lg shadow-xl mb-8 hidden">
              <h2 class="text-2xl font-bold mb-4 text-red-600">Gestión de Películas (ADMIN)</h2>
             <form id="movie-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                
-                <input type="hidden" id="movieId" name="movieId"> 
+
+                <input type="hidden" id="movieId" name="movieId">
 
                 <div class="md:col-span-1">
                     <label for="titulo" class="block text-sm font-medium mb-1">Título:</label>
                     <input type="text" id="titulo" name="titulo" required class="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white">
                 </div>
-                
+
                 <div class="md:col-span-1">
                     <label for="anio" class="block text-sm font-medium mb-1">Año:</label>
                     <input type="number" id="anio" name="anio" required class="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white">
@@ -96,12 +96,12 @@
                     <label for="rating" class="block text-sm font-medium mb-1">Puntuación (0.0 a 10.0):</label>
                     <input type="number" id="rating" name="rating" step="0.1" min="0" max="10" required class="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white">
                 </div>
-                
+
                 <div class="md:col-span-1">
-                    <label for="imagenUrl" class="block text-sm font-medium mb-1">Nombre Archivo Imagen (ej: dune.jpg):</label> 
+                    <label for="imagenUrl" class="block text-sm font-medium mb-1">Nombre Archivo Imagen (ej: dune.jpg):</label>
                     <input type="text" id="imagenUrl" name="imagenUrl" class="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white" placeholder="solo_el_nombre.png">
                 </div>
-                
+
                 <div class="md:col-span-2">
                     <label class="block text-sm font-medium mb-1">Género:</label>
                     <div id="genre-select-container" class="relative">
@@ -114,13 +114,13 @@
                     <button type="button" id="cancel-edit-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition hidden">Cancelar Edición</button>
                     <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition">Guardar Película</button>
                 </div>
-                
+
                 <p id="form-message" class="md:col-span-2 text-center mt-2 hidden"></p>
             </form>
         </section>
 
         <h1 class="text-4xl font-bold mb-8">Catálogo Completo</h1>
-        
+
         <!-- GENRE FILTER SECTION -->
         <section class="mb-8">
             <h2 class="text-2xl font-semibold mb-4">Filtrar Contenido</h2>
@@ -147,7 +147,7 @@
             </div>
             <h3 class="text-3xl font-bold text-white mb-6 text-center">Inicia Sesión en PEDFLIX</h3>
             <div id="login-message" class="text-red-400 mb-4 hidden"></div>
-            
+
             <label for="login-username" class="block text-sm font-medium mb-2">Usuario</label>
             <input type="text" id="login-username" class="w-full p-3 mb-4 rounded" value="Pedro">
 
@@ -168,7 +168,7 @@
             </div>
             <h3 class="text-3xl font-bold text-white mb-6 text-center">Crea tu Cuenta PEDFLIX</h3>
             <div id="register-message" class="mb-4 text-center hidden"></div>
-            
+
             <label for="register-username" class="block text-sm font-medium mb-2">Nuevo Usuario</label>
             <input type="text" id="register-username" class="w-full p-3 mb-4 rounded" placeholder="Escribe tu nombre de usuario">
 
@@ -189,8 +189,8 @@
         let genres = [];
         let isAuthenticated = false;
         let authUsername = null;
-        let authPassword = null; 
-        let currentEditId = null; 
+        let authPassword = null;
+        let currentEditId = null;
 
         // --- MANEJO DE MODALES ---
         function openModal(modalId) {
@@ -214,24 +214,24 @@
             const openRegisterBtnHeader = document.getElementById('open-register-btn');
             const logoutBtn = document.getElementById('logout-btn');
             const userDisplay = document.getElementById('user-display');
-            const movieFormSection = document.getElementById('movie-form-section'); 
-            
+            const movieFormSection = document.getElementById('movie-form-section');
+
             const splashScreen = document.getElementById('splash-screen');
             const mainContent = document.getElementById('main-content');
 
             isAuthenticated = loggedIn;
             authUsername = user || null;
-            
+
             if (loggedIn) {
                 splashScreen.classList.add('hidden');
                 mainContent.classList.remove('hidden');
-                
+
                 openLoginBtnHeader.classList.add('hidden');
                 openRegisterBtnHeader.classList.add('hidden');
                 logoutBtn.classList.remove('hidden');
                 userDisplay.textContent = `Bienvenido, ${user}`;
                 userDisplay.classList.remove('hidden');
-                
+
                 if (movieFormSection) {
                     movieFormSection.classList.toggle('hidden', user !== 'Pedro');
                 }
@@ -253,7 +253,7 @@
         // --- AUTENTICACIÓN, REGISTRO, LOGOUT ---
         function handleLogout() {
             authUsername = null;
-            authPassword = null; 
+            authPassword = null;
             updateUI(null, false);
             showCustomMessage('Has cerrado sesión correctamente.', 'success');
         }
@@ -275,13 +275,13 @@
 
                 if (response.ok) {
                     authUsername = username;
-                    authPassword = password; 
+                    authPassword = password;
                     updateUI(username, true);
                     closeModal('login-modal');
-                    
-                    await fetchGenres(); 
-                    await fetchMovies(); 
-                    
+
+                    await fetchGenres();
+                    await fetchMovies();
+
                     showCustomMessage(`¡Inicio de sesión exitoso! Bienvenido, ${username}.`, 'success');
 
                 } else if (response.status === 401) {
@@ -297,8 +297,8 @@
                 messageElement.classList.remove('hidden');
             }
         }
-        
-        async function handleRegister() { 
+
+        async function handleRegister() {
             const username = document.getElementById('register-username').value;
             const password = document.getElementById('register-password').value;
             const messageElement = document.getElementById('register-message');
@@ -317,7 +317,7 @@
                 const response = await fetch(`${API_URL}/registro`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password }) 
+                    body: JSON.stringify({ username, password })
                 });
 
                 if (response.status === 201) {
@@ -345,11 +345,11 @@
         }
 
         // --- GESTIÓN DEL FORMULARIO DE PELÍCULAS (ADMIN) ---
-        
+
         function resetMovieForm() {
             const form = document.getElementById('movie-form');
             form.reset();
-            currentEditId = null; 
+            currentEditId = null;
             document.getElementById('form-message').classList.add('hidden');
             document.getElementById('cancel-edit-btn').classList.add('hidden');
             form.querySelector('button[type="submit"]').textContent = 'Guardar Película';
@@ -362,7 +362,7 @@
             const messageElement = document.getElementById('form-message');
             messageElement.classList.add('hidden');
             messageElement.classList.remove('text-green-400', 'text-red-400');
-            
+
             const movieData = {
                 titulo: form.titulo.value,
                 sinopsis: form.sinopsis.value,
@@ -370,9 +370,9 @@
                 // *** CAMBIO: Guardamos solo el nombre del archivo ***
                 imagenUrl: form.imagenUrl.value || null, // Se espera 'dune.jpg', no la ruta completa
                 rating: parseFloat(form.rating.value),
-                genreIds: [parseInt(form.genreId.value)] 
+                genreIds: [parseInt(form.genreId.value)]
             };
-             
+
             if (!isAuthenticated || !authUsername || !authPassword) {
                 messageElement.textContent = 'Error: Debes iniciar sesión como ADMINISTRADOR para gestionar películas.';
                 messageElement.classList.remove('hidden');
@@ -402,16 +402,16 @@
                 });
 
                 const isCreating = method === 'POST';
-                const expectedStatus = isCreating ? 201 : 200; 
+                const expectedStatus = isCreating ? 201 : 200;
 
                 if (response.status === expectedStatus) {
                     const actionText = isCreating ? 'añadida' : 'actualizada';
                     messageElement.textContent = `Película "${movieData.titulo}" ${actionText} correctamente.`;
                     messageElement.classList.remove('hidden');
                     messageElement.classList.add('text-green-400');
-                    resetMovieForm(); 
-                    await fetchMovies(); 
-                    
+                    resetMovieForm();
+                    await fetchMovies();
+
                 } else if (response.status === 401 || response.status === 403) {
                     messageElement.textContent = 'Error: No tienes permisos de ADMINISTRADOR (403 Prohibido).';
                     messageElement.classList.remove('hidden');
@@ -442,7 +442,7 @@
             }
 
             messageBox.textContent = text;
-            messageBox.classList.remove('bg-green-500', 'bg-yellow-500', 'text-white'); 
+            messageBox.classList.remove('bg-green-500', 'bg-yellow-500', 'text-white');
             if (type === 'success') {
                 messageBox.classList.add('bg-green-500', 'text-white');
             } else { // 'info', 'error' u otro
@@ -452,50 +452,50 @@
 
             setTimeout(() => {
                 messageBox.style.opacity = '0';
-            }, 3000); 
+            }, 3000);
         }
-        
+
         // --- VISUALIZACIÓN DE PELÍCULAS Y GÉNEROS ---
         function createMovieCard(movie) {
             const card = document.createElement('div');
             card.className = 'movie-card bg-gray-900 rounded-lg overflow-hidden cursor-pointer relative';
-            
+
             // *** CAMBIO: Construir la ruta a la imagen local ***
             const imageFileName = movie.imagenUrl; // Esperamos 'dune.jpg'
             const imageUrl = imageFileName ? `images/${imageFileName}` : null; // Construye 'images/dune.jpg'
             const placeholderUrl = 'images/placeholder.png'; // Ruta al placeholder
 
             const genreName = movie.generos && movie.generos.length > 0 ? movie.generos[0].nombre : 'Desconocido';
-            
+
             card.innerHTML = `
-                <img src="${imageUrl ? imageUrl : placeholderUrl}" alt="${movie.titulo}" 
-                     onerror="this.onerror=null; this.src='${placeholderUrl}';" 
+                <img src="${imageUrl ? imageUrl : placeholderUrl}" alt="${movie.titulo}"
+                     onerror="this.onerror=null; this.src='${placeholderUrl}';"
                      class="w-full h-auto object-cover rounded-t-lg aspect-[2/3]">
                 <div class="p-4">
                     <h4 class="text-lg font-bold truncate">${movie.titulo}</h4>
                     <p class="text-sm text-gray-400">${movie.anio} | ${genreName}</p>
                     <p class="text-sm text-yellow-500 mt-1">⭐ ${movie.rating !== undefined && movie.rating !== null ? movie.rating.toFixed(1) : 'N/A'} / 10</p>
                 </div>
-                 <div class="admin-buttons absolute top-2 right-2 space-x-1 hidden"></div> 
+                 <div class="admin-buttons absolute top-2 right-2 space-x-1 hidden"></div>
             `;
 
              // Añadir botones de editar/eliminar SI el usuario es Pedro (ADMIN)
              if (authUsername === 'Pedro') {
                  const adminButtonsDiv = card.querySelector('.admin-buttons');
-                 adminButtonsDiv.classList.remove('hidden'); 
-                 
+                 adminButtonsDiv.classList.remove('hidden');
+
                  const editBtn = document.createElement('button');
-                 editBtn.innerHTML = '✏️'; 
+                 editBtn.innerHTML = '✏️';
                  editBtn.className = 'bg-blue-600 hover:bg-blue-700 text-white text-xs p-1 rounded';
                  editBtn.title = 'Editar Película';
                  editBtn.onclick = (e) => {
-                     e.stopPropagation(); 
+                     e.stopPropagation();
                      populateEditForm(movie);
                  };
                  adminButtonsDiv.appendChild(editBtn);
 
                  const deleteBtn = document.createElement('button');
-                 deleteBtn.innerHTML = '🗑️'; 
+                 deleteBtn.innerHTML = '🗑️';
                  deleteBtn.className = 'bg-red-600 hover:bg-red-700 text-white text-xs p-1 rounded';
                  deleteBtn.title = 'Eliminar Película';
                  deleteBtn.onclick = (e) => {
@@ -513,7 +513,7 @@
         function renderMovies(moviesToRender) {
             const container = document.getElementById('movies-container');
             const message = document.getElementById('no-movies-message');
-            container.innerHTML = ''; 
+            container.innerHTML = '';
 
             if (!Array.isArray(moviesToRender)) {
                 console.error("renderMovies received something that is not an array:", moviesToRender);
@@ -528,7 +528,7 @@
             } else {
                 message.classList.add('hidden');
                 moviesToRender.forEach(movie => {
-                    if(movie && movie.titulo) { 
+                    if(movie && movie.titulo) {
                         container.appendChild(createMovieCard(movie));
                     } else {
                         console.warn("Found an invalid movie object:", movie);
@@ -540,16 +540,16 @@
         function filterAndRenderMovies(genreId) {
              if (!Array.isArray(movies)) {
                  console.error("Global 'movies' array is invalid.");
-                 movies = []; 
+                 movies = [];
              }
 
             let filteredMovies = movies;
             if (genreId !== 'all') {
-                filteredMovies = movies.filter(movie => 
+                filteredMovies = movies.filter(movie =>
                     movie.generos && movie.generos.some(g => g.id === parseInt(genreId))
                 );
             }
-            
+
             document.querySelectorAll('.genre-btn').forEach(btn => btn.classList.replace('bg-red-600', 'bg-gray-700'));
             const activeBtn = document.querySelector(`.genre-btn[data-genre-id="${genreId}"]`);
             if (activeBtn) {
@@ -561,28 +561,28 @@
 
         function createGenreButton(genre) {
             const button = document.createElement('button');
-            button.textContent = genre.nombre; 
+            button.textContent = genre.nombre;
             button.className = 'genre-btn bg-gray-700 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-full transition';
             button.dataset.genreId = genre.id;
-            
+
             button.onclick = () => filterAndRenderMovies(button.dataset.genreId);
             return button;
         }
 
         // --- FUNCIONES FETCH (con manejo de errores mejorado) ---
-        
+
         function handleFetchError(error, type) {
-            console.error(`Error al cargar ${type}:`, error); 
-            
+            console.error(`Error al cargar ${type}:`, error);
+
             let containerId, formMessageId, errorMessage;
-            
-            if (type === 'géneros') { 
+
+            if (type === 'géneros') {
                 containerId = 'genres-container';
                 formMessageId = 'genre-load-message';
                 errorMessage = 'Error: No se pudo conectar a la API para cargar los géneros.';
             } else { // Tipo 'películas'
                 containerId = 'movies-container';
-                formMessageId = 'no-movies-message'; 
+                formMessageId = 'no-movies-message';
                 errorMessage = 'Error al conectar con el servidor de películas.';
             }
 
@@ -593,7 +593,7 @@
 
             const formMessage = document.getElementById(formMessageId);
             if (formMessage) {
-                if (type === 'géneros') { 
+                if (type === 'géneros') {
                     formMessage.textContent = 'Error: No se pudieron cargar los géneros para el formulario.';
                     formMessage.classList.remove('hidden');
                     formMessage.classList.add('text-red-400');
@@ -603,10 +603,10 @@
                      formMessage.classList.add('text-red-400');
                 }
             }
-             
+
              if (type === 'géneros') genres = [];
-             if (type === 'películas') movies = []; 
-             renderMovies([]); 
+             if (type === 'películas') movies = [];
+             renderMovies([]);
         }
 
         async function fetchGenres() {
@@ -618,26 +618,26 @@
                 }
 
                 const response = await fetch(`${API_URL}/generos`, { headers });
-                
+
                 if (!response.ok) {
                     throw new Error(`Error ${response.status} (No autorizado o error del servidor).`);
                 }
-                
+
                 genres = await response.json();
-                
+
                 const container = document.getElementById('genres-container');
-                container.innerHTML = ''; 
-                
+                container.innerHTML = '';
+
                 const allBtn = document.createElement('button');
                 allBtn.textContent = "Todos";
-                allBtn.className = 'genre-btn bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-full transition'; 
+                allBtn.className = 'genre-btn bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-full transition';
                 allBtn.dataset.genreId = 'all';
                 allBtn.onclick = () => filterAndRenderMovies('all');
                 container.appendChild(allBtn);
-                
+
                 if (Array.isArray(genres)) {
                     genres.forEach(genre => {
-                         if(genre && genre.nombre) { 
+                         if(genre && genre.nombre) {
                             container.appendChild(createGenreButton(genre));
                          } else {
                              console.warn("Se encontró un objeto de género inválido:", genre);
@@ -645,9 +645,9 @@
                     });
                 } else {
                     console.error("La respuesta de géneros no es un array:", genres);
-                    genres = []; 
+                    genres = [];
                 }
-                
+
                 const selectContainer = document.getElementById('genre-select-container');
                 const selectMessage = document.getElementById('genre-load-message');
                 if (selectContainer) {
@@ -678,18 +678,18 @@
                 }
 
                 const response = await fetch(`${API_URL}/peliculas`, { headers });
-                
+
                 if (!response.ok) {
                     throw new Error(`Error ${response.status} (No autorizado o error del servidor).`);
                 }
-                
+
                 movies = await response.json();
                  if (!Array.isArray(movies)) {
                      console.error("La respuesta de películas no es un array:", movies);
-                     movies = []; 
+                     movies = [];
                  }
-                 
-                filterAndRenderMovies('all'); 
+
+                filterAndRenderMovies('all');
 
             } catch (error) {
                 handleFetchError(error, 'películas');
@@ -706,27 +706,27 @@
             form.rating.value = movie.rating;
              // *** CAMBIO: Rellenar con el nombre del archivo si existe ***
             form.imagenUrl.value = movie.imagenUrl || ''; // Pone el nombre del archivo o vacío
-            
+
             if (movie.generos && movie.generos.length > 0) {
-                 form.genreId.value = movie.generos[0].id; 
+                 form.genreId.value = movie.generos[0].id;
             } else {
-                 form.genreId.value = ''; 
+                 form.genreId.value = '';
             }
 
-            currentEditId = movie.id; 
-            document.getElementById('cancel-edit-btn').classList.remove('hidden'); 
+            currentEditId = movie.id;
+            document.getElementById('cancel-edit-btn').classList.remove('hidden');
             form.querySelector('button[type="submit"]').textContent = 'Actualizar Película';
-             
+
              document.getElementById('movie-form-section').scrollIntoView({ behavior: 'smooth' });
         }
-        
+
         async function handleDeleteMovie(movieId, movieTitle) {
             if (!confirm(`¿Estás seguro de que quieres eliminar la película "${movieTitle}"?`)) {
-                return; 
+                return;
             }
 
             if (!isAuthenticated || !authUsername || !authPassword) {
-                showCustomMessage('Error: Debes iniciar sesión como ADMIN para eliminar películas.', 'error'); 
+                showCustomMessage('Error: Debes iniciar sesión como ADMIN para eliminar películas.', 'error');
                 return;
             }
 
@@ -737,17 +737,17 @@
             try {
                 const response = await fetch(url, { method: 'DELETE', headers: headers });
 
-                if (response.status === 204) { 
+                if (response.status === 204) {
                     showCustomMessage(`Película "${movieTitle}" eliminada correctamente.`, 'success');
-                    await fetchMovies(); 
+                    await fetchMovies();
                 } else if (response.status === 401 || response.status === 403) {
-                    showCustomMessage('Error: No tienes permisos de ADMIN para eliminar.', 'error'); 
+                    showCustomMessage('Error: No tienes permisos de ADMIN para eliminar.', 'error');
                 } else {
-                     showCustomMessage(`Error ${response.status} al eliminar la película.`, 'error'); 
+                     showCustomMessage(`Error ${response.status} al eliminar la película.`, 'error');
                 }
             } catch (error) {
                  console.error('Network error deleting movie:', error);
-                 showCustomMessage('Error de conexión al eliminar la película.', 'error'); 
+                 showCustomMessage('Error de conexión al eliminar la película.', 'error');
             }
         }
 
@@ -759,7 +759,7 @@
             document.getElementById('open-login-btn').addEventListener('click', () => openModal('login-modal'));
             document.getElementById('logout-btn').addEventListener('click', handleLogout);
             document.getElementById('open-register-btn').addEventListener('click', () => openModal('register-modal'));
-            
+
             const movieForm = document.getElementById('movie-form');
             if (movieForm) {
                 movieForm.addEventListener('submit', handleMovieFormSubmit);
