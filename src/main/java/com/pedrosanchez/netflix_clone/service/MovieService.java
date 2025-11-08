@@ -6,18 +6,18 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 
-// Componente de servicio para la lógica de negocio relacionada con las películas.
+// Servicio que contiene la lógica de negocio relacionada con las películas
 @Service
 public class MovieService {
 
     private final MovieRepository movieRepository;
 
-    // Inyección de dependencia del repositorio de películas.
+    // Constructor con inyección de dependencias del repositorio de películas
     public MovieService(MovieRepository movieRepository) {
         this.movieRepository = movieRepository;
     }
 
-    // Devuelve todas las películas.
+    // Obtiene todas las películas de la base de datos
     public List<Movie> findAll() {
         return movieRepository.findAll();
     }
@@ -27,7 +27,7 @@ public class MovieService {
         return movieRepository.findById(id);
     }
 
-    // Guarda o actualiza una película.
+    // Guarda una nueva película o actualiza una existente
     public Movie save(Movie movie) {
         return movieRepository.save(movie);
     }

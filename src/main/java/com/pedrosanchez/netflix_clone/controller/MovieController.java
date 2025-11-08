@@ -48,7 +48,7 @@ public class MovieController {
                 .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 
-    // Crea una nueva película. Recibe un Map para procesar campos dinámicos como 'genreIds'.
+    // Crea una nueva película a partir de los datos recibidos desde el frontend.
     @PostMapping
     public ResponseEntity<?> createMovie(@RequestBody Map<String, Object> payload) {
         try {
@@ -79,6 +79,7 @@ public class MovieController {
                 movie.setGeneros(new HashSet<>());
             }
 
+            // Guarda la película en la base de datos
             Movie savedMovie = movieService.save(movie);
             return new ResponseEntity<>(savedMovie, HttpStatus.CREATED);
         } catch (ClassCastException cce) {
@@ -91,7 +92,7 @@ public class MovieController {
         }
     }
 
-    // Actualiza una película por ID. Recibe un Map para campos dinámicos.
+    // Actualiza los datos de una película existente según su ID
     @PutMapping("/{id}")
     public ResponseEntity<?> updateMovie(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
         return movieService.findById(id)
@@ -117,7 +118,7 @@ public class MovieController {
                             }
                         }
 
-                        // Procesamiento de IDs de género para actualizar los géneros
+                        // Actualiza los géneros si se reciben nuevos IDs.
                         if (payload.containsKey("genreIds")) {
                             Object genreIdsObj = payload.get("genreIds");
                             List<Long> genreIds = new ArrayList<>();
@@ -137,6 +138,8 @@ public class MovieController {
                                 existingMovie.setGeneros(new HashSet<>());
                             }
                         }
+
+                        // Guarda los cambios en la base de datos
                         Movie updatedMovie = movieService.save(existingMovie);
                         return new ResponseEntity<>(updatedMovie, HttpStatus.OK);
 

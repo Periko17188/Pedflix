@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-// Controlador para gestionar el registro y la autenticación de usuarios
+// Controlador que gestiona el registro de nuevos usuarios
 @RestController
 @RequestMapping("/api/v1")
 public class AuthController {
@@ -18,17 +18,17 @@ public class AuthController {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    // Inyección de dependencias
+    // Constructor que inyecta las dependencias necesarias
     public AuthController(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
-    // Registra un nuevo usuario
+    // Metodo que registra un nuevo usuario en el sistema
     @PostMapping("/registro")
     public ResponseEntity<User> registerUser(@RequestBody User user) {
 
-        // Verifica si el nombre de usuario ya existe
+        // Comprueba si el nombre de usuario ya existe
         if (userRepository.findByUsername(user.getUsername()).isPresent()) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
@@ -37,11 +37,13 @@ public class AuthController {
         String rawPassword = user.getPassword();
         String encodedPassword = passwordEncoder.encode(rawPassword);
 
+        // Crea un nuevo objeto usuario con los datos recibidos
         User newUser = new User();
         newUser.setUsername(user.getUsername());
         newUser.setPassword(encodedPassword);
         newUser.setRole("USER");
 
+        // Guarda el nuevo usuario en la base de datos
         User savedUser = userRepository.save(newUser);
         return new ResponseEntity<>(savedUser, HttpStatus.CREATED);
     }

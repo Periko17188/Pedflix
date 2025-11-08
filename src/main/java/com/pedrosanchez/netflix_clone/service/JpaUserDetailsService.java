@@ -8,30 +8,30 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import java.util.Optional;
 
-// Componente de servicio requerido por Spring Security para cargar detalles del usuario.
+// Servicio que permite a Spring Security obtener la información de un usuario desde la base de datos
 @Service
 public class JpaUserDetailsService implements UserDetailsService {
 
     private final UserRepository userRepository;
 
-    // Inyección de dependencia del repositorio.
+    // Constructor con inyección de dependencias del repositorio de usuarios
     public JpaUserDetailsService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
 
-    // Busca un usuario por nombre en la base de datos para Spring Security.
+    // Carga los datos de un usuario por su nombre de usuario
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         Optional<User> userOptional = userRepository.findByUsername(username);
 
-        // Si el usuario no existe, lanza la excepción estándar de seguridad
+        // Si el usuario no existe, lanza una excepción estándar de Spring Security
         if (userOptional.isEmpty()) {
             throw new UsernameNotFoundException("Usuario no encontrado: " + username);
         }
 
         User user = userOptional.get();
 
-        // Construye el objeto UserDetails que Spring Security necesita
+        // Devuelve un objeto UserDetails con los datos que Spring Security necesita
         return org.springframework.security.core.userdetails.User.builder()
                 .username(user.getUsername())
                 .password(user.getPassword())

@@ -7,14 +7,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
-// Controlador REST para gestionar operaciones con géneros (CRUD simple)
+// Controlador REST que maneja las operaciones básicas con los géneros de películas
 @RestController
 @RequestMapping("/api/v1/generos")
 public class GenreController {
 
     private final GenreService genreService;
 
-    // Inyección de dependencia del servicio de géneros
+    // Constructor que recibe el servicio de géneros
     public GenreController(GenreService genreService) {
         this.genreService = genreService;
     }
@@ -25,7 +25,7 @@ public class GenreController {
         return genreService.findAll();
     }
 
-    // Crea un nuevo género
+    // Crea un nuevo género y lo guarda en la base de datos
     @PostMapping
     public ResponseEntity<Genre> createGenre(@RequestBody Genre genre) {
         Genre savedGenre = genreService.save(genre);

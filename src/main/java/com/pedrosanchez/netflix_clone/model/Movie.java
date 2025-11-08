@@ -4,19 +4,19 @@ import jakarta.persistence.*;
 import java.util.HashSet;
 import java.util.Set;
 
-// Entidad JPA que representa una película en la base de datos.
+// Entidad que representa una película en la base de datos.
 @Entity
 @Table(name = "pelicula")
 public class Movie {
 
-    // Clave primaria autogenerada
+    // Identificador único autogenerado
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String titulo;
 
-    // Sinopsis de la película (largo hasta 1000 caracteres)
+    // Descripción de la película
     @Column(length = 1000)
     private String sinopsis;
 
@@ -46,8 +46,7 @@ public class Movie {
         this.rating = rating;
     }
 
-    // --- Getters y Setters ---
-
+    // Getters y Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -68,5 +67,7 @@ public class Movie {
 
     public Set<Genre> getGeneros() { return generos; }
     public void setGeneros(Set<Genre> generos) { this.generos = generos; }
+
+    // Metodo auxiliar para añadir un género a la película
     public void addGenre(Genre genre) { this.generos.add(genre); }
 }

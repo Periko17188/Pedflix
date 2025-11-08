@@ -10,15 +10,15 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-/**
- * Componente que se ejecuta al inicio de la aplicación para cargar datos iniciales.
- */
+//Clase que se ejecuta automáticamente al iniciar la aplicación.
+//Su función es cargar datos iniciales (géneros y películas) en la base de datos.
 @Component
 public class DataLoader implements CommandLineRunner {
 
     private final GenreRepository genreRepository;
     private final MovieRepository movieRepository;
 
+    // Constructor para inyectar los repositorios de géneros y películas
     public DataLoader(GenreRepository genreRepository, MovieRepository movieRepository) {
         this.genreRepository = genreRepository;
         this.movieRepository = movieRepository;
@@ -27,7 +27,7 @@ public class DataLoader implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
 
-        // Solo cargar si no hay datos
+        // Si ya existen datos en la base de datos, no se cargan de nuevo
         if (movieRepository.count() > 0 && genreRepository.count() > 0) {
             System.out.println("--- DATOS YA EXISTENTES, NO SE CARGAN DATOS INICIALES ---");
             return; // Salir si ya hay datos
@@ -35,7 +35,7 @@ public class DataLoader implements CommandLineRunner {
 
         System.out.println("--- INICIANDO CARGA DE DATOS INICIALES (SEED DATA) ---");
 
-        // --- CREAR Y GUARDAR GÉNEROS ---
+        // CREAR Y GUARDAR GÉNEROS
         Genre accion = new Genre("Acción");
         Genre aventura = new Genre("Aventura");
         Genre comedia = new Genre("Comedia");
@@ -53,6 +53,7 @@ public class DataLoader implements CommandLineRunner {
         Genre crimen = new Genre("Crimen / Policíaca");
         Genre misterio = new Genre("Misterio");
 
+        // Guarda todos los géneros creados en la base de datos
         genreRepository.saveAll(Arrays.asList(
                 accion, aventura, comedia, drama, terror,
                 cienciaFiccion, fantasia, suspense, romance,
@@ -62,8 +63,7 @@ public class DataLoader implements CommandLineRunner {
 
         System.out.println("Géneros guardados.");
 
-        // --- CREAR PELÍCULAS (CON RATING AÑADIDO) ---
-
+        // CREAR PELÍCULAS CON TODOS SUS DATOS
         Movie interstellar = new Movie(
                 "Interstellar",
                 "Un equipo de exploradores viaja a través de un agujero de gusano en busca de un nuevo hogar para la humanidad.",
@@ -199,7 +199,7 @@ public class DataLoader implements CommandLineRunner {
         );
         elViajeDeChihiro.setGeneros(new HashSet<>(Set.of(fantasia, animacion, aventura)));
 
-        // --- GUARDAR PELÍCULAS ---
+        // Guarda todas las películas creadas en la base de datos
         movieRepository.saveAll(Arrays.asList(
                 interstellar, deadpool, elSenorDeLosAnillos, elConjuro, laLaLand,
                 toyStory, salvarAlSoldadoRyan, elPadrino, matrix, grease,

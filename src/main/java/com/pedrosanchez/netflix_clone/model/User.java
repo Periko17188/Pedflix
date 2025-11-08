@@ -6,12 +6,12 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
-// Entidad JPA que representa un usuario de la aplicación.
+// Entidad que representa un usuario de la aplicación.
 @Entity
 @Table(name = "APP_USER")
 public class User {
 
-    // Clave primaria autogenerada
+    // Identificador único autogenerado
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -20,19 +20,18 @@ public class User {
     private String password;
     private String role;
 
-    // Constructor vacío requerido por JPA
+    // Constructor vacío obligatorio para JPA
     public User() {
     }
 
-    // Constructor para inicializar campos
+    // Constructor para crear usuarios con datos iniciales
     public User(String username, String password, String role) {
         this.username = username;
         this.password = password;
         this.role = role;
     }
 
-    // --- Getters y Setters ---
-
+    // Getters y Setters
     public Long getId() {
         return id;
     }

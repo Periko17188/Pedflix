@@ -5,18 +5,19 @@ import jakarta.persistence.*;
 import java.util.HashSet;
 import java.util.Set;
 
-// Entidad JPA que representa un género de película en la base de datos.
+// Entidad que representa un género de película en la base de datos
 @Entity
 @Table(name = "genero")
 public class Genre {
 
-    // Clave primaria autogenerada
+    // Identificador único autogenerado
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String nombre;
 
+    // Relación muchos a muchos con películas
     @ManyToMany(mappedBy = "generos")
     @JsonIgnore
     private Set<Movie> peliculas = new HashSet<>();
@@ -28,8 +29,7 @@ public class Genre {
         this.nombre = nombre;
     }
 
-    // --- Getters y Setters ---
-
+    // Getters y Setters
     public Long getId() {
         return id;
     }
