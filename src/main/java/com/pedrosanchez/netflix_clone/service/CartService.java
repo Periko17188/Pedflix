@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -35,4 +36,9 @@ public class CartService {
     public void clearCart(User user) {
         cartItemRepository.deleteByUser(user);
     }
+
+    public Optional<CartItem> findById(Long id) {
+        return cartItemRepository.findById(id);
+    }
+
 }

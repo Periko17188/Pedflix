@@ -398,8 +398,10 @@
           <p class="text-sm text-gray-400">${movie.anio} | ${genreName}</p>
           <p class="text-sm text-yellow-500 mt-1">⭐ ${movie.rating!=null?movie.rating.toFixed(1):'N/A'} / 10</p>
           <div class="mt-3 flex items-center justify-between">
-            <button class="buy-btn bg-red-600 hover:bg-red-700 text-white text-sm font-semibold py-1 px-3 rounded transition hidden">Comprar Película</button>
-            <div class="admin-buttons space-x-2 hidden"></div>
+          <button
+              class="buy-btn bg-red-600 hover:bg-red-700 text-white text-sm font-semibold py-1 px-3 rounded transition hidden"
+              data-movie-id="${movie.id}">Comprar Película
+            </button>            <div class="admin-buttons space-x-2 hidden"></div>
           </div>
         </div>
       `;
@@ -558,58 +560,106 @@
 
     // ========== CARRITO ==========
     // Añadir película al carrito y actualizar botón
-    function handleBuy(movie, btn){
-      // Evitar duplicados en carrito: si ya está, no la añadimos
-      if(!cart.some(it => it.id === movie.id)){
-        cart.push({id:movie.id, titulo:movie.titulo});
-      }
-      btn.textContent='Añadida ✅';
-      btn.disabled=true;
-      updateCartUI();
-      showCustomMessage('Película añadida al carrito','success');
+    async function handleBuy(movie, btn) {
+    const base64 = btoa(`${authUsername}:${authPassword}`);
+
+    const res = await fetch(`${API_URL}/cart/add/${movie.id}`, {
+        method: "POST",
+        headers: { "Authorization": `Basic ${base64}` }
+    });
+
+    if (res.ok) {
+        btn.textContent = "Añadida ✅";
+        btn.disabled = true;
+        await loadCartFromBackend(); // ⬅ carrito REAL
+        showCustomMessage("Película añadida al carrito", "success");
+    } else {
+        showCustomMessage("Error al añadir al carrito", "error");
     }
+}
 
     // Actualiza badge, listado desplegable y visibilidad
-    function updateCartUI(){
-      const badge=document.getElementById('cart-badge');
-      const dd=document.getElementById('cart-dropdown');
+    function updateCartUI() {
+    const badge = document.getElementById('cart-badge');
+    const dd = document.getElementById('cart-dropdown');
 
-      // Badge
-      if(cart.length>0){ badge.textContent=String(cart.length); badge.style.display='inline-block'; }
-      else{ badge.style.display='none'; }
-
-      // Lista
-      dd.innerHTML='';
-      if(cart.length===0){
-        dd.innerHTML='<p class="text-sm text-gray-300 p-2">El carrito está vacío.</p>';
-        return;
-      }
-      cart.forEach((item,idx)=>{
-        const row=document.createElement('div');
-        row.className='cart-item';
-        row.innerHTML=`
-          <span class="cart-item-title">${item.titulo}</span>
-          <span>5.99€ <button class="text-red-500 hover:text-red-400" title="Eliminar" onclick="removeFromCart(${idx})">❌</button></span>`;
-        dd.appendChild(row);
-      });
-      const total= (cart.length*5.99).toFixed(2);
-      const totalDiv=document.createElement('div');
-      totalDiv.className='cart-total flex justify-between mt-2';
-      totalDiv.innerHTML=`<span>Total:</span><span>${total}€</span>`;
-      dd.appendChild(totalDiv);
-
-      const checkoutBtn=document.createElement('button');
-      checkoutBtn.className='bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-3 rounded w-full mt-3';
-      checkoutBtn.textContent='Finalizar compra';
-      checkoutBtn.onclick=checkout;
-      dd.appendChild(checkoutBtn);
+    if (cart.length > 0) {
+        badge.textContent = cart.length;
+        badge.style.display = 'inline-block';
+    } else {
+        badge.style.display = 'none';
     }
+
+    dd.innerHTML = '';
+
+    if (cart.length === 0) {
+        dd.innerHTML = '<p class="text-sm text-gray-300 p-2">El carrito está vacío.</p>';
+        return;
+    }
+
+    cart.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'cart-item';
+        row.innerHTML = `
+            <span class="cart-item-title">${item.movie.titulo}</span>
+            <span>${item.price}€
+                <button class="text-red-500 hover:text-red-400"
+                        title="Eliminar"
+                        onclick="removeFromCart(${item.id})">❌</button>
+            </span>
+        `;
+        dd.appendChild(row);
+    });
+
+    const total = cart.reduce((sum, item) => sum + item.price, 0).toFixed(2);
+    const totalDiv = document.createElement('div');
+    totalDiv.className = 'cart-total flex justify-between mt-2';
+    totalDiv.innerHTML = `<span>Total:</span><span>${total}€</span>`;
+    dd.appendChild(totalDiv);
+
+    const checkoutBtn = document.createElement('button');
+    checkoutBtn.className = 'bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-3 rounded w-full mt-3';
+    checkoutBtn.textContent = 'Finalizar compra';
+    checkoutBtn.onclick = checkout;
+    dd.appendChild(checkoutBtn);
+}
+
+function syncBuyButtonsWithCart() {
+  // Si el carrito viene del backend: item.movie.id
+  const idsEnCarrito = new Set(
+    cart.map(item => item.movie ? item.movie.id : item.id) // por si aún usas formato antiguo
+  );
+
+  document.querySelectorAll('.buy-btn').forEach(btn => {
+    const movieId = Number(btn.dataset.movieId);
+
+    if (idsEnCarrito.has(movieId)) {
+      btn.textContent = 'Añadida ✅';
+      btn.disabled = true;
+    } else {
+      btn.textContent = 'Comprar Película';
+      btn.disabled = false;
+    }
+  });
+}
+
 
     // Eliminar del carrito por índice y refrescar badge/lista
-    function removeFromCart(index){
-      cart.splice(index,1);
-      updateCartUI();
+    async function removeFromCart(cartItemId) {
+    const base64 = btoa(`${authUsername}:${authPassword}`);
+
+    const res = await fetch(`${API_URL}/cart/${cartItemId}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Basic ${base64}` }
+    });
+
+    if (res.ok) {
+        await loadCartFromBackend(); // actualiza carrito REAL
+        showCustomMessage("Artículo eliminado del carrito", "success");
+    } else {
+        showCustomMessage("Error al eliminar del carrito", "error");
     }
+}
 
     // Finalizar compra (ficticia) -> backend /orders/checkout
     async function checkout(){
@@ -631,6 +681,20 @@
         showCustomMessage('Error de conexión','info');
       }
     }
+
+    async function loadCartFromBackend() {
+    const base64 = btoa(`${authUsername}:${authPassword}`);
+
+    const res = await fetch(`${API_URL}/cart`, {
+        headers: { "Authorization": `Basic ${base64}` }
+    });
+
+    if (res.ok) {
+        cart = await res.json();   // carrito real
+        updateCartUI();
+        syncBuyButtonsWithCart();  // ⬅ sincroniza botones
+    }
+}
 
     // Toggle del desplegable del carrito
     document.addEventListener('click', (ev)=>{

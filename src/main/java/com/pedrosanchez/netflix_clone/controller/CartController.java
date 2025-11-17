@@ -50,18 +50,31 @@ public class CartController {
         return cartService.getCartItems(user);
     }
 
+    // Comprueba si una película está en el carrito del usuario
+    @GetMapping("/contains/{movieId}")
+    public ResponseEntity<?> contains(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long movieId) {
+
+        User user = userRepository.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+
+        boolean exists = cartService.getCartItems(user)
+                .stream()
+                .anyMatch(item -> item.getMovie().getId().equals(movieId));
+
+        return ResponseEntity.ok(java.util.Map.of("inCart", exists));
+    }
+
     // Elimina un artículo del carrito
     @DeleteMapping("/{id}")
     public ResponseEntity<?> removeItem(@PathVariable Long id) {
 
-        // Si el item no existe, lanzamos excepción
-        cartService.getCartItems(null)
-                .stream()
-                .filter(item -> item.getId().equals(id))
-                .findFirst()
+        CartItem item = cartService.findById(id)
                 .orElseThrow(() -> new NotFoundException("El artículo con ID " + id + " no existe en el carrito"));
 
         cartService.removeFromCart(id);
+
         return ResponseEntity.ok("Artículo eliminado del carrito");
     }
 }
