@@ -1,6 +1,7 @@
 package com.pedrosanchez.netflix_clone.controller;
 
 import com.pedrosanchez.netflix_clone.dto.UserRegisterDTO;
+import com.pedrosanchez.netflix_clone.exception.NotFoundException;
 import com.pedrosanchez.netflix_clone.model.User;
 import com.pedrosanchez.netflix_clone.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,10 +27,12 @@ public class AuthController {
 
         // Comprueba si el nombre de usuario ya existe
         if (userRepository.findByUsername(dto.getUsername()).isPresent()) {
-            return new ResponseEntity<>("El usuario ya existe", HttpStatus.BAD_REQUEST);
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body("El usuario ya existe");
         }
 
-        // Codifica la contraseña antes de guardar
+        // Codifica la contraseña
         String encodedPassword = passwordEncoder.encode(dto.getPassword());
 
         // Crea el nuevo usuario usando el DTO
@@ -39,8 +42,9 @@ public class AuthController {
                 "USER"
         );
 
-        // Guarda el nuevo usuario en la base de datos
+        // Guarda el usuario
         User savedUser = userRepository.save(newUser);
-        return new ResponseEntity<>(savedUser, HttpStatus.CREATED);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedUser);
     }
 }

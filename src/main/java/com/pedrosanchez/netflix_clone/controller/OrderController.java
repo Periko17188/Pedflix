@@ -1,5 +1,6 @@
 package com.pedrosanchez.netflix_clone.controller;
 
+import com.pedrosanchez.netflix_clone.exception.NotFoundException;
 import com.pedrosanchez.netflix_clone.model.*;
 import com.pedrosanchez.netflix_clone.repository.UserRepository;
 import com.pedrosanchez.netflix_clone.service.*;
@@ -24,12 +25,18 @@ public class OrderController {
     // Finaliza la compra ficticia del carrito
     @PostMapping("/checkout")
     public ResponseEntity<?> checkout(@AuthenticationPrincipal UserDetails userDetails) {
-        User user = userRepository.findByUsername(userDetails.getUsername()).orElseThrow();
+
+        User user = userRepository.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
 
         List<Movie> movies = cartService.getCartItems(user)
                 .stream()
                 .map(CartItem::getMovie)
                 .collect(Collectors.toList());
+
+        if (movies.isEmpty()) {
+            throw new NotFoundException("No hay artículos en el carrito para realizar la compra.");
+        }
 
         Order order = orderService.createOrder(user, movies);
 
@@ -39,7 +46,10 @@ public class OrderController {
     // Muestra todas las compras del usuario
     @GetMapping
     public List<Order> getOrders(@AuthenticationPrincipal UserDetails userDetails) {
-        User user = userRepository.findByUsername(userDetails.getUsername()).orElseThrow();
+
+        User user = userRepository.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+
         return orderService.getOrdersByUser(user);
     }
 }

@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
 import java.util.List;
 
 // Controlador REST que maneja las operaciones básicas con los géneros de películas
@@ -26,7 +27,7 @@ public class GenreController {
 
     // Crea un nuevo género y lo guarda en la base de datos
     @PostMapping
-    public ResponseEntity<Genre> createGenre(@RequestBody Genre genre) {
+    public ResponseEntity<Genre> createGenre(@Valid @RequestBody Genre genre) {
         Genre savedGenre = genreService.save(genre);
         return new ResponseEntity<>(savedGenre, HttpStatus.CREATED);
     }

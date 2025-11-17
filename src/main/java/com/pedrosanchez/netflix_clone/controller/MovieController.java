@@ -1,6 +1,7 @@
 package com.pedrosanchez.netflix_clone.controller;
 
 import com.pedrosanchez.netflix_clone.dto.MovieRequestDTO;
+import com.pedrosanchez.netflix_clone.exception.NotFoundException;
 import com.pedrosanchez.netflix_clone.model.Genre;
 import com.pedrosanchez.netflix_clone.model.Movie;
 import com.pedrosanchez.netflix_clone.repository.GenreRepository;
@@ -21,93 +22,86 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class MovieController {
 
-    // Servicios y repositorios necesarios para las operaciones sobre películas
     private final MovieService movieService;
     private final GenreRepository genreRepository;
 
     // Obtiene todas las películas
     @GetMapping
     public List<Movie> getAllMovies() {
-        try {
-            return movieService.findAll();
-        } catch (Exception e) {
-            System.err.println("Error al obtener todas las películas: " + e.getMessage());
-            return List.of();
-        }
+        return movieService.findAll();
     }
 
     // Obtiene una película por ID
     @GetMapping("/{id}")
     public ResponseEntity<Movie> getMovieById(@PathVariable Long id) {
-        return movieService.findById(id)
-                .map(movie -> new ResponseEntity<>(movie, HttpStatus.OK))
-                .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
+        Movie movie = movieService.findById(id)
+                .orElseThrow(() -> new NotFoundException("Película no encontrada con ID: " + id));
+
+        return new ResponseEntity<>(movie, HttpStatus.OK);
     }
 
     // Crea una nueva película usando DTO + Validación
     @PostMapping
-    public ResponseEntity<?> createMovie(@Valid @RequestBody MovieRequestDTO dto) {
+    public ResponseEntity<Movie> createMovie(@Valid @RequestBody MovieRequestDTO dto) {
 
-        try {
-            Movie movie = new Movie(
-                    dto.getTitulo(),
-                    dto.getSinopsis(),
-                    dto.getAnio(),
-                    dto.getImagenUrl(),
-                    dto.getRating()
-            );
+        Movie movie = new Movie(
+                dto.getTitulo(),
+                dto.getSinopsis(),
+                dto.getAnio(),
+                dto.getImagenUrl(),
+                dto.getRating()
+        );
 
-            // Cargar géneros por IDs
-            Set<Genre> genres = new HashSet<>(genreRepository.findAllById(dto.getGenreIds()));
-            movie.setGeneros(genres);
+        // Buscar géneros
+        Set<Genre> genres = new HashSet<>(genreRepository.findAllById(dto.getGenreIds()));
 
-            Movie savedMovie = movieService.save(movie);
-            return new ResponseEntity<>(savedMovie, HttpStatus.CREATED);
-
-        } catch (Exception e) {
-            System.err.println("Error al crear película: " + e.getMessage());
-            return new ResponseEntity<>("Error interno del servidor.", HttpStatus.INTERNAL_SERVER_ERROR);
+        if (genres.isEmpty()) {
+            throw new NotFoundException("Los géneros enviados no existen");
         }
+
+        movie.setGeneros(genres);
+
+        Movie savedMovie = movieService.save(movie);
+        return new ResponseEntity<>(savedMovie, HttpStatus.CREATED);
     }
 
     // Actualiza película usando DTO + Validación
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateMovie(
+    public ResponseEntity<Movie> updateMovie(
             @PathVariable Long id,
             @Valid @RequestBody MovieRequestDTO dto
     ) {
-        return movieService.findById(id)
-                .map(existingMovie -> {
-                    try {
-                        existingMovie.setTitulo(dto.getTitulo());
-                        existingMovie.setSinopsis(dto.getSinopsis());
-                        existingMovie.setAnio(dto.getAnio());
-                        existingMovie.setImagenUrl(dto.getImagenUrl());
-                        existingMovie.setRating(dto.getRating());
 
-                        Set<Genre> genres = new HashSet<>(genreRepository.findAllById(dto.getGenreIds()));
-                        existingMovie.setGeneros(genres);
+        Movie movie = movieService.findById(id)
+                .orElseThrow(() -> new NotFoundException("No existe la película con ID: " + id));
 
-                        Movie updatedMovie = movieService.save(existingMovie);
-                        return new ResponseEntity<>(updatedMovie, HttpStatus.OK);
+        movie.setTitulo(dto.getTitulo());
+        movie.setSinopsis(dto.getSinopsis());
+        movie.setAnio(dto.getAnio());
+        movie.setImagenUrl(dto.getImagenUrl());
+        movie.setRating(dto.getRating());
 
-                    } catch (Exception e) {
-                        System.err.println("Error al actualizar película: " + e.getMessage());
-                        return new ResponseEntity<>("Error interno del servidor.", HttpStatus.INTERNAL_SERVER_ERROR);
-                    }
-                })
-                .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
+        Set<Genre> genres = new HashSet<>(genreRepository.findAllById(dto.getGenreIds()));
+
+        if (genres.isEmpty()) {
+            throw new NotFoundException("Los géneros enviados no existen");
+        }
+
+        movie.setGeneros(genres);
+
+        Movie updatedMovie = movieService.save(movie);
+        return new ResponseEntity<>(updatedMovie, HttpStatus.OK);
     }
 
     // Elimina una película por ID
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteMovie(@PathVariable Long id) {
-        try {
-            movieService.deleteById(id);
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-        } catch (Exception e) {
-            System.err.println("Error al eliminar película con ID " + id + ": " + e.getMessage());
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+
+        if (!movieService.findById(id).isPresent()) {
+            throw new NotFoundException("No existe la película con ID: " + id);
         }
+
+        movieService.deleteById(id);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 }
