@@ -123,9 +123,9 @@ function createMovie(movieData, form, messageElement) {
     fetch(url, {
         method: 'POST', 
         headers: {
-            'Content-Type': 'application/json' 
+            'Content-Type': 'application/json'
         },
-        body: JSON.stringify(movieData) 
+        body: JSON.stringify(movieData)
     })
     .then(response => {
         if (!response.ok) {
@@ -135,10 +135,10 @@ function createMovie(movieData, form, messageElement) {
     })
     .then(data => {
         console.log("Película guardada con ID:", data.id);
-        
+
         messageElement.textContent = `¡Película "${data.titulo}" creada con ID: ${data.id}!`;
-        messageElement.className = 'success-message'; 
-        
+        messageElement.className = 'success-message';
+
         form.reset();
         fetchMovies();
     })

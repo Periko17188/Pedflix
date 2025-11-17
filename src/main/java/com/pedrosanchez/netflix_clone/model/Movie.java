@@ -13,17 +13,12 @@ public class Movie {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
     private String titulo;
-
     // Descripción de la película
     @Column(length = 1000)
     private String sinopsis;
-
     private Integer anio;
-
     private String imagenUrl;
-
     private Double rating;
 
     // Una película puede tener múltiples géneros.

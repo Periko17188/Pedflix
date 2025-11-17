@@ -31,11 +31,17 @@ public class JpaUserDetailsService implements UserDetailsService {
 
         User user = userOptional.get();
 
+        // Normaliza el rol para evitar duplicar ROLE_
+        String role = user.getRole();
+        if (!role.startsWith("ROLE_")) {
+            role = "ROLE_" + role;
+        }
+
         // Devuelve un objeto UserDetails con los datos que Spring Security necesita
         return org.springframework.security.core.userdetails.User.builder()
                 .username(user.getUsername())
                 .password(user.getPassword())
-                .roles(user.getRole())
+                .authorities(role)
                 .build();
     }
 }

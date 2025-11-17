@@ -1,15 +1,20 @@
 package com.pedrosanchez.netflix_clone.config;
 
 import com.pedrosanchez.netflix_clone.service.JpaUserDetailsService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.validation.beanvalidation.MethodValidationPostProcessor;
 
 // Clase de configuración de seguridad para la aplicación.
 // Aquí se definen los permisos, el login, el logout y la codificación de contraseñas.
@@ -30,37 +35,34 @@ public class SecurityConfig {
         http
                 .userDetailsService(jpaUserDetailsService)
                 .cors(Customizer.withDefaults())
-                // Deshabilitar CSRF para la API y H2 Console
-                .csrf(csrf -> csrf.ignoringRequestMatchers(
-                        "/h2-console/**",
-                        "/api/v1/registro"
-                    )
-                )
+                .csrf(csrf -> csrf.disable())
 
                 // Permite que la consola H2 funcione dentro de un iframe
                 .headers(headers -> headers
                         .frameOptions(frame -> frame.sameOrigin())
                 )
                 .authorizeHttpRequests(auth -> auth
-                    // Rutas públicas
                     .requestMatchers("/", "/index.html", "/static/**", "/css/**", "/js/**", "/images/**",
                     "/h2-console/**").permitAll()
-                    // Permitir registro sin autenticación
+
+                    .requestMatchers("/login").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/v1/registro").permitAll()
-                    // Permitir acceso a películas y géneros sin autenticación
                     .requestMatchers(HttpMethod.GET, "/api/v1/peliculas", "/api/v1/generos").permitAll()
-                    // Rutas que requieren rol ADMIN
+
+                    // ADMIN
                     .requestMatchers(HttpMethod.POST, "/api/v1/peliculas").hasRole("ADMIN")
-                    // Cualquier otra ruta requiere autenticación
+                    .requestMatchers(HttpMethod.PUT, "/api/v1/peliculas/**").hasRole("ADMIN")
+                    .requestMatchers(HttpMethod.DELETE, "/api/v1/peliculas/**").hasRole("ADMIN")
+
+                    .requestMatchers("/api/v1/cart/**", "/api/v1/orders/**").authenticated()
+
                     .anyRequest().authenticated()
                 )
-                // Configura el formulario de inicio de sesión
-                .formLogin(form -> form.loginPage("/login").permitAll()
-                .defaultSuccessUrl("/", true))
+                // Autenticación por HTTP Basic (para tus fetch con Authorization: Basic ...)
+                .httpBasic(Customizer.withDefaults())
 
-                // Configura el cierre de sesión
-                .logout(logout -> logout.permitAll().logoutSuccessUrl("/?logout"))
-                .httpBasic(httpBasic -> httpBasic.disable());
+                // Cierre de sesión igual que antes
+                .logout(logout -> logout.permitAll().logoutSuccessUrl("/?logout"));
 
         return http.build();
     }

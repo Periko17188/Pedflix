@@ -7,7 +7,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-// Clase de configuración para insertar usuarios iniciales en la base de datos
 @Configuration
 public class Seeder {
 
@@ -15,18 +14,19 @@ public class Seeder {
     CommandLineRunner initDatabase(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         return args -> {
 
-            if (userRepository.count() == 0) {
-                // Codifica la contraseña común para los usuarios iniciales
-                String encodedPassword = passwordEncoder.encode("12341234");
+            final String rawPassword = "12341234";
+            final String encodedPassword = passwordEncoder.encode(rawPassword);
 
-                User admin = new User("Pedro", encodedPassword, "ADMIN");
-                userRepository.save(admin);
+            // ADMIN
+            userRepository.findByUsername("Pedro").ifPresentOrElse(user -> {
+                user.setPassword(encodedPassword);
+                user.setRole("ADMIN");
+                userRepository.save(user);
+            }, () -> {
+                userRepository.save(new User("Pedro", encodedPassword, "ADMIN"));
+            });
 
-                User client = new User("Gia", encodedPassword, "USER");
-                userRepository.save(client);
-
-                System.out.println("Usuarios iniciales creados: Pedro (ADMIN) y Gia (USER)");
-            }
+            System.out.println("Seeder actualizado: Pedro=ADMIN");
         };
     }
 }
