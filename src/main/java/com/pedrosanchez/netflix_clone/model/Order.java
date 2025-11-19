@@ -1,16 +1,27 @@
 package com.pedrosanchez.netflix_clone.model;
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Getter
 @Setter
 @NoArgsConstructor
-@RequiredArgsConstructor
+@AllArgsConstructor
+@Builder
 @Entity
 @Table(name = "orders")
+@JsonIdentityInfo(
+        generator = ObjectIdGenerators.PropertyGenerator.class,
+        property = "id"
+)
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Order {
 
     @Id
@@ -18,23 +29,41 @@ public class Order {
     private Long id;
 
     // Usuario que realiza la compra
-    @NonNull
-    @ManyToOne
-    @JoinColumn(name = "user_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private User user;
 
-    @NonNull
+    @Column(name = "order_date", nullable = false)
     private LocalDateTime orderDate;
-    @NonNull
+
+    @Column(name = "total_amount", nullable = false)
     private Double totalAmount;
 
     // Lista de películas incluidas en la compra
-    @NonNull
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(
             name = "order_movies",
             joinColumns = @JoinColumn(name = "order_id"),
-            inverseJoinColumns = @JoinColumn(name = "movie_id")
+            inverseJoinColumns = @JoinColumn(name = "movie_id"),
+            foreignKey = @ForeignKey(ConstraintMode.CONSTRAINT),
+            inverseForeignKey = @ForeignKey(ConstraintMode.CONSTRAINT)
     )
-    private List<Movie> movies;
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    @Builder.Default
+    private List<Movie> movies = new ArrayList<>();
+
+    // Métodos de ayuda
+    public void addMovie(Movie movie) {
+        if (movies == null) {
+            movies = new ArrayList<>();
+        }
+        movies.add(movie);
+    }
+
+    public void removeMovie(Movie movie) {
+        if (movies != null) {
+            movies.remove(movie);
+        }
+    }
 }

@@ -5,12 +5,16 @@ import com.pedrosanchez.netflix_clone.model.*;
 import com.pedrosanchez.netflix_clone.repository.UserRepository;
 import com.pedrosanchez.netflix_clone.service.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -22,34 +26,53 @@ public class OrderController {
     private final OrderService orderService;
     private final UserRepository userRepository;
 
-    // Finaliza la compra ficticia del carrito
+    // Finaliza la compra del carrito
     @PostMapping("/checkout")
+    @Transactional
     public ResponseEntity<?> checkout(@AuthenticationPrincipal UserDetails userDetails) {
+        try {
+            User user = userRepository.findByUsername(userDetails.getUsername())
+                    .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
 
-        User user = userRepository.findByUsername(userDetails.getUsername())
-                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+            List<Movie> movies = cartService.getCartItems(user)
+                    .stream()
+                    .map(CartItem::getMovie)
+                    .collect(Collectors.toList());
 
-        List<Movie> movies = cartService.getCartItems(user)
-                .stream()
-                .map(CartItem::getMovie)
-                .collect(Collectors.toList());
+            if (movies.isEmpty()) {
+                Map<String, String> response = new HashMap<>();
+                response.put("error", "El carrito está vacío");
+                return ResponseEntity.badRequest().body(response);
+            }
 
-        if (movies.isEmpty()) {
-            throw new NotFoundException("No hay artículos en el carrito para realizar la compra.");
+            Order order = orderService.createOrder(user, movies);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Compra realizada con éxito");
+            response.put("orderId", order.getId());
+            response.put("totalItems", movies.size());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Error al procesar la compra: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
-
-        Order order = orderService.createOrder(user, movies);
-
-        return ResponseEntity.ok("Compra realizada con éxito. ID pedido: " + order.getId());
     }
 
     // Muestra todas las compras del usuario
     @GetMapping
-    public List<Order> getOrders(@AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<?> getOrders(@AuthenticationPrincipal UserDetails userDetails) {
+        try {
+            User user = userRepository.findByUsername(userDetails.getUsername())
+                    .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
 
-        User user = userRepository.findByUsername(userDetails.getUsername())
-                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
-
-        return orderService.getOrdersByUser(user);
+            return ResponseEntity.ok(orderService.getOrdersByUser(user));
+        } catch (Exception e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Error al obtener las órdenes: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
     }
 }

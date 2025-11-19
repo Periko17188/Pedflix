@@ -661,24 +661,44 @@ function syncBuyButtonsWithCart() {
     }
 }
 
-    // Finalizar compra (ficticia) -> backend /orders/checkout
+    // Finalizar compra -> backend /orders/checkout
     async function checkout(){
-      if(cart.length===0){ showCustomMessage('El carrito está vacío','info'); return; }
-      try{
-        const base64=btoa(`${authUsername}:${authPassword}`);
-        const res=await fetch(`${API_URL}/orders/checkout`,{ method: 'POST',
-        headers: {'Authorization': `Basic ${base64}`},credentials: 'include'});
-        if(res.ok){
+      if(cart.length === 0){
+        showCustomMessage('El carrito está vacío','info');
+        return;
+      }
+
+      try {
+        const base64 = btoa(`${authUsername}:${authPassword}`);
+        const res = await fetch(`${API_URL}/orders/checkout`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${base64}`,
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include'
+        });
+
+        const result = await res.json();
+
+        if(res.ok) {
+          // Vaciar el carrito solo después de una compra exitosa
           cart = [];
           updateCartUI();
-          // Re-activar botones de compra en las tarjetas (por si quieres volver a comprar)
-          document.querySelectorAll('.buy-btn').forEach(b=>{ b.textContent='Comprar Película'; b.disabled=false; });
-          showCustomMessage('Compra realizada con éxito','success');
-        }else{
-          showCustomMessage('Error al procesar la compra','info');
+          // Recargar el carrito desde el backend para asegurar consistencia
+          await loadCartFromBackend();
+          // Re-activar botones de compra en las tarjetas
+          document.querySelectorAll('.buy-btn').forEach(b => {
+            b.textContent = 'Comprar Película';
+            b.disabled = false;
+          });
+          showCustomMessage(result.message || 'Compra realizada con éxito', 'success');
+        } else {
+          showCustomMessage(result || 'Error al procesar la compra', 'error');
         }
-      }catch(e){
-        showCustomMessage('Error de conexión','info');
+      } catch(e) {
+        console.error('Error en checkout:', e);
+        showCustomMessage('Error de conexión: ' + e.message, 'error');
       }
     }
 
