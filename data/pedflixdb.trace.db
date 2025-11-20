@@ -1,0 +1,4 @@
+2025-11-20 16:19:40.704344+01:00 jdbc[13]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Error de Sintaxis en sentencia SQL "[*]APP_USER"; se esperaba "ALTER, ANALYZE"
+Syntax error in SQL statement "[*]APP_USER"; expected "ALTER, ANALYZE"; SQL statement:
+APP_USER [42001-232]

@@ -92,7 +92,19 @@
 <!-- MAIN -->
 <main id="main-content" class="p-8 hidden">
 
-    <!-- FORM ADMIN (solo para Pedro) -->
+    <!-- ADMIN CONTROLS -->
+    <div id="admin-controls" class="mb-8 flex flex-wrap gap-4">
+        <!-- Backup Button -->
+        <button id="backup-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors">
+            <i class="fas fa-database"></i>
+            <span>Generar Copia de Seguridad</span>
+            <span id="backup-spinner" class="hidden ml-2">
+                <i class="fas fa-spinner fa-spin"></i>
+            </span>
+        </button>
+    </div>
+
+    <!-- MOVIE FORM (solo para Pedro) -->
     <section id="movie-form-section" class="bg-gray-800 p-6 rounded-lg shadow-xl mb-8 hidden">
         <h2 class="text-2xl font-bold mb-4 text-red-600">Gestión de Películas (ADMIN)</h2>
         <form id="movie-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -246,11 +258,13 @@
         userDisplay.textContent = `Bienvenida, ${user}`; // texto solicitado
         userDisplay.classList.remove('hidden');
 
-        // ADMIN solo para Pedro
-        movieFormSection?.classList.toggle('hidden', user !== 'Pedro');
+        // Mostrar controles de admin solo para Pedro
+        const isAdmin = user === 'Pedro';
+        movieFormSection?.classList.toggle('hidden', !isAdmin);
+        document.getElementById('admin-controls')?.classList.toggle('hidden', !isAdmin);
 
-        // Carrito: solo usuarios normales (no Pedro)
-        cartContainer.classList.toggle('hidden', user === 'Pedro');
+        // Carrito: solo usuarios normales (no admin)
+        cartContainer.classList.toggle('hidden', isAdmin);
 
       }else{
         splash.classList.remove('hidden'); main.classList.add('hidden');
@@ -770,8 +784,79 @@ function syncBuyButtonsWithCart() {
       }
     });
 
+    // Event Listeners
+    document.addEventListener('click',(e)=>{
+        if(e.target.matches('.movie-card, .movie-card *')){
+            const card=e.target.closest('.movie-card');
+            if(card && card.dataset.movieId) showMovieDetails(card.dataset.movieId);
+        }
+    });
+
+    // Backup button click handler
+    document.getElementById('backup-btn').addEventListener('click', handleBackup);
+
+    // --- Backup Functionality ---
+    async function handleBackup() {
+        const backupBtn = document.getElementById('backup-btn');
+        const backupSpinner = document.getElementById('backup-spinner');
+        const originalText = backupBtn.innerHTML;
+        
+        if (!isAuthenticated || !authUsername || !authPassword) {
+            showCustomMessage('Debes iniciar sesión como administrador para realizar copias de seguridad.', 'error');
+            return;
+        }
+
+        try {
+            // Disable button and show spinner
+            backupBtn.disabled = true;
+            backupSpinner.classList.remove('hidden');
+            backupBtn.querySelector('span').textContent = 'Procesando...';
+
+            const base64 = btoa(`${authUsername}:${authPassword}`);
+            const response = await fetch(`${API_URL}/admin/backup`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Basic ${base64}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Error ${response.status}: ${response.statusText}`);
+            }
+
+            // Get filename from Content-Disposition header
+            const contentDisposition = response.headers.get('Content-Disposition');
+            const filename = contentDisposition
+                ? contentDisposition.split('filename=')[1].replace(/"/g, '')
+                : `backup_${new Date().toISOString().split('T')[0]}.zip`;
+
+            // Create blob from response and trigger download
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            
+            // Cleanup
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            showCustomMessage('Copia de seguridad generada con éxito', 'success');
+        } catch (error) {
+            console.error('Backup error:', error);
+            showCustomMessage(`Error al generar la copia de seguridad: ${error.message}`, 'error');
+        } finally {
+            // Re-enable button and restore original state
+            backupBtn.disabled = false;
+            backupSpinner.classList.add('hidden');
+            backupBtn.querySelector('span').textContent = 'Generar Copia de Seguridad';
+        }
+    }
+
     // --- Inicialización ---
-    document.addEventListener('DOMContentLoaded', ()=>{
+    document.addEventListener('DOMContentLoaded',()=>{
       updateUI(null,false);
 
       document.getElementById('open-login-btn').addEventListener('click', ()=>openModal('login-modal'));
