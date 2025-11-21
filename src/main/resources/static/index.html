@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Pedflix - Proyecto Final DAW</title>
+    <title>RetroVideo - Proyecto Final DAW</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
     <style>
@@ -83,7 +83,7 @@
 
 <!-- SPLASH -->
 <div id="splash-screen" class="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] text-center px-4">
-    <div class="text-red-600 text-6xl sm:text-7xl md:text-8xl font-black mb-8 animate-pulse-slow">PEDFLIX</div>
+    <div class="text-red-600 text-6xl sm:text-7xl md:text-8xl font-black mb-8 animate-pulse-slow">RetroVideo</div>
     <p class="text-xl text-gray-300 mb-12 max-w-lg">
         Disfruta de películas ilimitadas. Inicia sesión o regístrate para acceder al catálogo.
     </p>
@@ -116,8 +116,16 @@
             </div>
 
             <div class="md:col-span-1">
-                <label for="anio" class="block text-sm font-medium mb-1">Año:</label>
-                <input type="number" id="anio" name="anio" required class="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white">
+                <label for="anio" class="block text-sm font-medium mb-1">Año (ej: 2025):</label>
+                <input type="number" 
+                       id="anio" 
+                       name="anio" 
+                       required 
+                       min="1895"
+                       max="2500"
+                       oninput="validateYear(this)"
+                       class="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white">
+                <p id="year-error" class="text-red-400 text-xs mt-1 hidden">El año debe 4 dígitos</p>
             </div>
 
             <div class="md:col-span-2">
@@ -131,8 +139,22 @@
             </div>
 
             <div class="md:col-span-1">
-                <label for="imagenUrl" class="block text-sm font-medium mb-1">Nombre Archivo Imagen (ej: dune.jpg):</label>
-                <input type="text" id="imagenUrl" name="imagenUrl" class="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white" placeholder="solo_el_nombre.png">
+                <label class="block text-sm font-medium mb-1">Imagen de la película:</label>
+                <div class="flex items-center">
+                    <label class="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white text-sm py-1 px-3 rounded transition inline-flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        <span>Seleccionar Imagen</span>
+                        <input type="file" id="imagenFile" name="imagenFile" accept="image/*" class="hidden" onchange="updateImagePreview(this)">
+                    </label>
+                    <span id="selected-file-name" class="ml-2 text-xs text-gray-300 truncate max-w-xs"></span>
+                </div>
+                <input type="hidden" id="imagenUrl" name="imagenUrl">
+                <div id="image-preview" class="mt-2 hidden">
+                    <p class="text-xs text-gray-400 mb-1">Vista previa:</p>
+                    <img id="image-preview-img" src="#" alt="Vista previa" class="max-h-24 rounded border border-gray-600">
+                </div>
             </div>
 
             <div class="md:col-span-2">
@@ -174,7 +196,7 @@
         <div class="flex justify-end">
             <button class="text-gray-400 hover:text-white text-2xl" onclick="closeModal('login-modal')">&times;</button>
         </div>
-        <h3 class="text-3xl font-bold text-white mb-6 text-center">Inicia Sesión en PEDFLIX</h3>
+        <h3 class="text-3xl font-bold text-white mb-6 text-center">Inicia Sesión en RetroVideo</h3>
         <div id="login-message" class="text-red-400 mb-4 hidden"></div>
 
         <label for="login-username" class="block text-sm font-medium mb-2">Usuario</label>
@@ -195,7 +217,7 @@
         <div class="flex justify-end">
             <button class="text-gray-400 hover:text-white text-2xl" onclick="closeModal('register-modal')">&times;</button>
         </div>
-        <h3 class="text-3xl font-bold text-white mb-6 text-center">Crea tu Cuenta PEDFLIX</h3>
+        <h3 class="text-3xl font-bold text-white mb-6 text-center">Crea tu Cuenta RetroVideo</h3>
         <div id="register-message" class="mb-4 text-center hidden"></div>
 
         <label for="register-username" class="block text-sm font-medium mb-2">Nuevo Usuario</label>
@@ -344,25 +366,48 @@
     // --- Form Admin ---
     function resetMovieForm(){
       const form=document.getElementById('movie-form');
-      form.reset(); currentEditId=null;
+      form.reset(); 
+      currentEditId=null;
       document.getElementById('form-message').classList.add('hidden');
       document.getElementById('cancel-edit-btn').classList.add('hidden');
+      document.getElementById('image-preview').classList.add('hidden');
+      document.getElementById('selected-file-name').textContent = '';
+      document.getElementById('imagenUrl').value = '';
       form.querySelector('button[type="submit"]').textContent='Guardar Película';
     }
 
     async function handleMovieFormSubmit(e){
       e.preventDefault();
-      const form=e.target; const msg=document.getElementById('form-message');
-      msg.classList.add('hidden'); msg.classList.remove('text-green-400','text-red-400');
-
-      const movieData={
-        titulo: form.titulo.value,
-        sinopsis: form.sinopsis.value,
-        anio: parseInt(form.anio.value),
-        imagenUrl: form.imagenUrl.value || null,
-        rating: parseFloat(form.rating.value),
-        genreIds: [parseInt(form.genreId.value)]
+      
+      const form = e.target;
+      const formData = new FormData(form);
+      const fileInput = document.getElementById('imagenFile');
+      const genreSelect = document.getElementById('genreId');
+      
+      // Validar que se haya seleccionado un género
+      if (!genreSelect.value) {
+          showCustomMessage('Debes seleccionar al menos un género', 'error');
+          return;
+      }
+      
+      // Crear objeto con los datos del formulario
+      const movieData = {
+          titulo: form.titulo.value,
+          sinopsis: form.sinopsis.value,
+          anio: parseInt(form.anio.value),
+          rating: parseFloat(form.rating.value),
+          imagenUrl: form.imagenUrl.value,
+          genreIds: [parseInt(genreSelect.value)]
       };
+      
+      // Si hay un archivo seleccionado, lo añadimos al FormData
+      if (fileInput.files[0]) {
+          const fileName = fileInput.files[0].name;
+          movieData.imagenUrl = fileName;
+          formData.append('file', fileInput.files[0]);
+      }
+      const msg=document.getElementById('form-message');
+      msg.classList.add('hidden'); msg.classList.remove('text-green-400','text-red-400');
 
       if(!isAuthenticated || !authUsername || !authPassword){
         msg.textContent='Debes iniciar sesión como ADMIN.'; msg.classList.remove('hidden'); msg.classList.add('text-red-400'); return;
@@ -719,8 +764,8 @@ function syncBuyButtonsWithCart() {
 
     // Finalizar compra -> backend /orders/checkout
     async function checkout(){
-      if(cart.length === 0){
-        showCustomMessage('El carrito está vacío','info');
+      if(cart.length === 0) {
+        showCustomMessage('El carrito está vacío', 'info');
         return;
       }
 
@@ -855,18 +900,98 @@ function syncBuyButtonsWithCart() {
         }
     }
 
+    // Función para actualizar la vista previa de la imagen
+    function updateImagePreview(input) {
+        const file = input.files[0];
+        const previewImg = document.getElementById('image-preview-img');
+        const previewContainer = document.getElementById('image-preview');
+        const fileNameSpan = document.getElementById('selected-file-name');
+        
+        if (file) {
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                previewImg.src = e.target.result;
+                previewContainer.classList.remove('hidden');
+            };
+            
+            reader.readAsDataURL(file);
+            
+            // Mostrar solo el nombre del archivo, no la ruta completa
+            const fileName = file.name;
+            fileNameSpan.textContent = fileName;
+            
+            // Actualizar el campo oculto con el nombre del archivo
+            document.getElementById('imagenUrl').value = fileName;
+        } else {
+            previewContainer.classList.add('hidden');
+            fileNameSpan.textContent = '';
+            document.getElementById('imagenUrl').value = '';
+        }
+    }
+
+    // Validar año de la película
+    function validateYear(input) {
+        const year = input.value;
+        const errorElement = document.getElementById('year-error');
+        
+        if (year.length < 3 || year.length > 4) {
+            input.classList.add('border-red-500');
+            errorElement.classList.remove('hidden');
+            input.setCustomValidity('El año debe tener entre 3 y 4 dígitos');
+        } else {
+            input.classList.remove('border-red-500');
+            errorElement.classList.add('hidden');
+            input.setCustomValidity('');
+        }
+    }
+
     // --- Inicialización ---
-    document.addEventListener('DOMContentLoaded',()=>{
-      updateUI(null,false);
+    document.addEventListener('DOMContentLoaded', () => {
+      // Inicializar la UI
+      updateUI(null, false);
 
-      document.getElementById('open-login-btn').addEventListener('click', ()=>openModal('login-modal'));
-      document.getElementById('open-register-btn').addEventListener('click', ()=>openModal('register-modal'));
-      document.getElementById('logout-btn').addEventListener('click', handleLogout);
+      // Configurar manejadores de eventos de autenticación
+      const openLoginBtn = document.getElementById('open-login-btn');
+      const openRegisterBtn = document.getElementById('open-register-btn');
+      const loginForm = document.getElementById('login-form');
+      const registerForm = document.getElementById('register-form');
+      
+      if (openLoginBtn) {
+        openLoginBtn.addEventListener('click', () => openModal('login-modal'));
+      }
+      
+      if (openRegisterBtn) {
+        openRegisterBtn.addEventListener('click', () => openModal('register-modal'));
+      }
+      
+      if (loginForm) {
+        loginForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          handleLogin();
+        });
+      }
+      
+      if (registerForm) {
+        registerForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          handleRegister();
+        });
+      }
+      
+      const logoutBtn = document.getElementById('logout-btn');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleLogout);
+      }
 
-      const movieForm=document.getElementById('movie-form');
-      if(movieForm){
+      // Configurar formulario de películas
+      const movieForm = document.getElementById('movie-form');
+      if (movieForm) {
         movieForm.addEventListener('submit', handleMovieFormSubmit);
-        document.getElementById('cancel-edit-btn').addEventListener('click', resetMovieForm);
+        const cancelEditBtn = document.getElementById('cancel-edit-btn');
+        if (cancelEditBtn) {
+          cancelEditBtn.addEventListener('click', resetMovieForm);
+        }
       }
     });
 

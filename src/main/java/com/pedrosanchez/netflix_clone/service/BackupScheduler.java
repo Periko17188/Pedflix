@@ -18,12 +18,10 @@ import java.nio.file.Paths;
 public class BackupScheduler {
 
     private final AdminService adminService;
-    private static final String BACKUP_BASE_PATH = "C:\\Users\\perik\\Desktop\\Pedflix-main\\backup";
+    private static final String BACKUP_BASE_PATH = "C:\\Users\\perik\\Desktop\\RetroVideo-main\\backup";
 
-    /**
-     * Programa la generación de copias de seguridad cada 15 minutos
-     * Se ejecuta a en punto, a los 15, 30 y 45 minutos de cada hora
-     */
+
+    // Programa la generación de copias de seguridad cada 15 minutos
     @Scheduled(cron = "0 */15 * * * *")
     public void scheduleBackup() {
         try {

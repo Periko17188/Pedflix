@@ -17,7 +17,6 @@ import java.util.HashSet;
 import java.util.Set;
 
 // Clase que inicializa la base de datos con datos de prueba
-// Se ejecuta automáticamente al arrancar la aplicación
 // Primero carga el usuario admin, luego los géneros y películas
 @Component
 @Order(1)
@@ -34,10 +33,10 @@ public class DatabaseInitializer implements CommandLineRunner {
 
         System.out.println("--- INICIANDO CARGA DE DATOS INICIALES ---");
 
-        // PASO 1: Crear usuario administrador
+        // Crear usuario administrador
         cargarUsuarioAdmin();
 
-        // PASO 2: Cargar géneros y películas (solo si no existen)
+        // Cargar géneros y películas (solo si no existen)
         cargarGenerosYPeliculas();
 
         System.out.println("--- CARGA DE DATOS FINALIZADA ---");

@@ -25,7 +25,7 @@ import java.time.format.DateTimeFormatter;
 public class AdminController {
 
     private final AdminService adminService;
-    private static final String BACKUP_BASE_PATH = "C:\\Users\\perik\\Desktop\\Proyectos\\pedflix\\backup";
+    private static final String BACKUP_BASE_PATH = "C:\\Users\\perik\\Desktop\\Proyectos\\RetroVideo\\backup";
 
     @PostMapping("/backup")
     public ResponseEntity<Resource> createBackup() throws IOException {
