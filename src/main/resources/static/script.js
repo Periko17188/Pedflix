@@ -1,0 +1,761 @@
+const API_URL = 'http://localhost:8080/api/v1';
+
+// Estado global
+let movies = [];
+let genres = [];
+let isAuthenticated = false;
+let authUsername = null;
+let authPassword = null;
+let currentEditId = null;
+
+// Carrito (solo para USER)
+let cart = []; // {id, titulo}
+
+// --- Modales ---
+function openModal(id){
+  const el=document.getElementById(id);
+  el.classList.remove('hidden');el.classList.add('flex');
+  if(id==='login-modal') document.getElementById('login-message').classList.add('hidden');
+  if(id==='register-modal') document.getElementById('register-message').classList.add('hidden');
+}
+function closeModal(id){
+  const el=document.getElementById(id);
+  el.classList.add('hidden');el.classList.remove('flex');
+  if(id==='movie-form-section') resetMovieForm();
+}
+
+// --- UI según sesión ---
+function updateUI(user, logged=false){
+  const openLogin=document.getElementById('open-login-btn');
+  const openRegister=document.getElementById('open-register-btn');
+  const logoutBtn=document.getElementById('logout-btn');
+  const userDisplay=document.getElementById('user-display');
+  const movieFormSection=document.getElementById('movie-form-section');
+  const splash=document.getElementById('splash-screen');
+  const main=document.getElementById('main-content');
+  const cartContainer=document.getElementById('cart-container');
+
+  isAuthenticated = logged;
+  authUsername = user || null;
+
+  if(logged){
+    splash.classList.add('hidden'); main.classList.remove('hidden');
+    openLogin.classList.add('hidden'); openRegister.classList.add('hidden');
+    logoutBtn.classList.remove('hidden');
+    userDisplay.textContent = `Bienvenida, ${user}`; // texto solicitado
+    userDisplay.classList.remove('hidden');
+
+    // Mostrar controles de admin solo para Pedro
+    const isAdmin = user === 'Pedro';
+    movieFormSection?.classList.toggle('hidden', !isAdmin);
+    document.getElementById('admin-controls')?.classList.toggle('hidden', !isAdmin);
+
+    // Carrito: solo usuarios normales (no admin)
+    cartContainer.classList.toggle('hidden', isAdmin);
+
+  }else{
+    splash.classList.remove('hidden'); main.classList.add('hidden');
+    openLogin.classList.remove('hidden'); openRegister.classList.remove('hidden');
+    logoutBtn.classList.add('hidden'); userDisplay.classList.add('hidden');
+    movieFormSection?.classList.add('hidden');
+    document.getElementById('cart-container').classList.add('hidden');
+  }
+}
+
+function handleLogout(){
+  authUsername=null; authPassword=null;
+  cart = []; updateCartUI();
+  updateUI(null,false);
+  showCustomMessage('Has cerrado sesión correctamente.','success');
+}
+
+// --- Login / Registro ---
+async function handleLogin(){
+  const username=document.getElementById('login-username').value;
+  const password=document.getElementById('login-password').value;
+  const msg=document.getElementById('login-message');
+  msg.classList.add('hidden');
+  const base64=btoa(`${username}:${password}`);
+
+  try{
+    const res=await fetch(`${API_URL}/peliculas`,{headers:{'Authorization':`Basic ${base64}`}});
+
+    if(res.ok){
+      authUsername=username; authPassword=password;
+      updateUI(username,true);
+      closeModal('login-modal');
+      await fetchGenres();
+      await fetchMovies();
+      showCustomMessage(`¡Inicio de sesión exitoso! Bienvenida, ${username}.`,'success');
+    }else if(res.status===401){
+      msg.textContent='Usuario o contraseña incorrectos.'; msg.classList.remove('hidden');
+    }else{
+      msg.textContent='Error desconocido al iniciar sesión.'; msg.classList.remove('hidden');
+    }
+  }catch(err){
+    msg.textContent='Error de conexión con el servidor.'; msg.classList.remove('hidden');
+  }
+}
+
+async function handleRegister(){
+  const username=document.getElementById('register-username').value;
+  const password=document.getElementById('register-password').value;
+  const msg=document.getElementById('register-message');
+  msg.classList.add('hidden'); msg.classList.remove('text-red-400','text-green-400');
+
+  if(username.length<3 || password.length<8){
+    msg.textContent='El usuario debe tener al menos 3 caracteres y la contraseña al menos 8.';
+    msg.classList.remove('hidden'); msg.classList.add('text-red-400'); return;
+  }
+  try{
+    const res=await fetch(`${API_URL}/registro`,{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({username,password})
+    });
+    if(res.status===201){
+      msg.textContent=`¡Registro exitoso! Ya puedes iniciar sesión con ${username}.`;
+      msg.classList.remove('hidden'); msg.classList.add('text-green-400');
+      document.getElementById('register-username').value='';
+      document.getElementById('register-password').value='';
+    }else if(res.status===400){
+      msg.textContent='El nombre de usuario ya está en uso.';
+      msg.classList.remove('hidden'); msg.classList.add('text-red-400');
+    }else{
+      msg.textContent=`Error ${res.status} al registrar.`; msg.classList.remove('hidden'); msg.classList.add('text-red-400');
+    }
+  }catch(e){
+    msg.textContent='Error de conexión con el servidor.'; msg.classList.remove('hidden'); msg.classList.add('text-red-400');
+  }
+}
+
+// --- Form Admin ---
+function resetMovieForm(){
+  const form=document.getElementById('movie-form');
+  form.reset(); 
+  currentEditId=null;
+  document.getElementById('form-message').classList.add('hidden');
+  document.getElementById('cancel-edit-btn').classList.add('hidden');
+  document.getElementById('image-preview').classList.add('hidden');
+  document.getElementById('selected-file-name').textContent = '';
+  document.getElementById('imagenUrl').value = '';
+  form.querySelector('button[type="submit"]').textContent='Guardar Película';
+}
+
+async function handleMovieFormSubmit(e){
+  e.preventDefault();
+  
+  const form = e.target;
+  const formData = new FormData(form);
+  const fileInput = document.getElementById('imagenFile');
+  const genreSelect = document.getElementById('genreId');
+  
+  // Validar que se haya seleccionado un género
+  if (!genreSelect.value) {
+      showCustomMessage('Debes seleccionar al menos un género', 'error');
+      return;
+  }
+  
+  // Crear objeto con los datos del formulario
+  const movieData = {
+      titulo: form.titulo.value,
+      sinopsis: form.sinopsis.value,
+      anio: parseInt(form.anio.value),
+      rating: parseFloat(form.rating.value),
+      imagenUrl: form.imagenUrl.value,
+      genreIds: [parseInt(genreSelect.value)]
+  };
+  
+  // Si hay un archivo seleccionado, lo añadimos al FormData
+  if (fileInput.files[0]) {
+      const fileName = fileInput.files[0].name;
+      movieData.imagenUrl = fileName;
+      formData.append('file', fileInput.files[0]);
+  }
+  const msg=document.getElementById('form-message');
+  msg.classList.add('hidden'); msg.classList.remove('text-green-400','text-red-400');
+
+  if(!isAuthenticated || !authUsername || !authPassword){
+    msg.textContent='Debes iniciar sesión como ADMIN.'; msg.classList.remove('hidden'); msg.classList.add('text-red-400'); return;
+  }
+
+  const base64=btoa(`${authUsername}:${authPassword}`);
+  const headers={'Content-Type':'application/json','Authorization':`Basic ${base64}`};
+
+  let url=`${API_URL}/peliculas`; let method='POST';
+  if(currentEditId){ url=`${API_URL}/peliculas/${currentEditId}`; method='PUT'; }
+
+  try{
+    const res=await fetch(url,{method,headers,body: JSON.stringify(movieData),credentials: 'include'});
+    const expected = method==='POST'?201:200;
+    if(res.status===expected){
+      msg.textContent=`Película "${movieData.titulo}" ${method==='POST'?'añadida':'actualizada'} correctamente.`;
+      msg.classList.remove('hidden'); msg.classList.add('text-green-400');
+      resetMovieForm(); await fetchMovies();
+    }else if(res.status===401 || res.status===403){
+      msg.textContent='No tienes permisos de ADMIN.'; msg.classList.remove('hidden'); msg.classList.add('text-red-400');
+    }else{
+      const t=await res.text();
+      msg.textContent=`Error ${res.status}: ${t.substring(0,100)}...`; msg.classList.remove('hidden'); msg.classList.add('text-red-400');
+    }
+  }catch(e){
+    msg.textContent='Error de conexión con el servidor.'; msg.classList.remove('hidden'); msg.classList.add('text-red-400');
+  }
+}
+
+// --- Mensajes superiores (confirmaciones) ---
+function showCustomMessage(text,type='info'){
+  let box=document.getElementById('custom-message-box');
+  if(!box){
+    box=document.createElement('div');
+    box.id='custom-message-box';
+    box.className='fixed top-0 left-1/2 transform -translate-x-1/2 mt-4 p-4 rounded-lg shadow-xl text-center transition-opacity duration-500 opacity-0 z-50';
+    document.body.appendChild(box);
+  }
+  box.textContent=text;
+  box.className = 'fixed top-0 left-1/2 transform -translate-x-1/2 mt-4 p-4 rounded-lg shadow-xl text-center transition-opacity duration-500 z-50 ' + (type==='success'?'bg-green-600 text-white':'bg-yellow-500 text-white');
+  box.style.opacity='1';
+  setTimeout(()=>{box.style.opacity='0';},3000);
+}
+
+// --- Películas y Géneros ---
+function createMovieCard(movie){
+  const card=document.createElement('div');
+  card.className='movie-card bg-gray-900 rounded-lg overflow-hidden relative';
+  const imageFileName=movie.imagenUrl;
+  const imageUrl=imageFileName?`images/${imageFileName}`:null;
+  const placeholder='images/placeholder.png';
+  const genreName=(movie.generos && movie.generos.length>0)?movie.generos[0].nombre:'Desconocido';
+
+  card.innerHTML=`
+    <img src="${imageUrl?imageUrl:placeholder}" alt="${movie.titulo}"
+         onerror="this.onerror=null; this.src='${placeholder}';"
+         class="w-full h-auto object-cover rounded-t-lg aspect-[2/3]">
+    <div class="p-4">
+      <h4 class="text-lg font-bold truncate">${movie.titulo}</h4>
+      <p class="text-sm text-gray-400">${movie.anio} | ${genreName}</p>
+      <p class="text-sm text-yellow-500 mt-1">⭐ ${movie.rating!=null?movie.rating.toFixed(1):'N/A'} / 10</p>
+      <div class="mt-3 flex items-center justify-between">
+      <button
+          class="buy-btn bg-red-600 hover:bg-red-700 text-white text-sm font-semibold py-1 px-3 rounded transition hidden"
+          data-movie-id="${movie.id}">Comprar Película
+        </button>            <div class="admin-buttons space-x-2 hidden"></div>
+      </div>
+    </div>
+  `;
+
+  // Botones admin (Pedro)
+  if(authUsername==='Pedro'){
+    const adminDiv=card.querySelector('.admin-buttons');
+    adminDiv.classList.remove('hidden');
+
+    const editBtn=document.createElement('button');
+    editBtn.innerHTML='✏️';
+    editBtn.className='bg-blue-600 hover:bg-blue-700 text-white text-xs p-1 rounded';
+    editBtn.title='Editar';
+    editBtn.onclick=(e)=>{e.stopPropagation(); populateEditForm(movie);};
+    adminDiv.appendChild(editBtn);
+
+    const delBtn=document.createElement('button');
+    delBtn.innerHTML='🗑️';
+    delBtn.className='bg-red-600 hover:bg-red-700 text-white text-xs p-1 rounded';
+    delBtn.title='Eliminar';
+    delBtn.onclick=(e)=>{e.stopPropagation(); handleDeleteMovie(movie.id,movie.titulo);};
+    adminDiv.appendChild(delBtn);
+  }
+
+  // Botón comprar (solo USER)
+  if(isAuthenticated && authUsername && authUsername!=='Pedro'){
+    const buyBtn=card.querySelector('.buy-btn');
+    buyBtn.classList.remove('hidden');
+    buyBtn.onclick=()=>handleBuy(movie, buyBtn);
+  }
+
+  return card;
+}
+
+function renderMovies(list){
+  const container=document.getElementById('movies-container');
+  const message=document.getElementById('no-movies-message');
+  container.innerHTML='';
+  if(!Array.isArray(list)){message.textContent="Error al mostrar las películas.";message.classList.remove('hidden');return;}
+  if(list.length===0){message.textContent="No hay películas que coincidan con el filtro actual.";message.classList.remove('hidden');}
+  else{
+    message.classList.add('hidden');
+    list.forEach(m => m && m.titulo ? container.appendChild(createMovieCard(m)) : null);
+  }
+}
+
+function filterAndRenderMovies(genreId){
+  if(!Array.isArray(movies)) movies=[];
+  let filtered=movies;
+  if(genreId!=='all'){
+    filtered=movies.filter(m => m.generos && m.generos.some(g => g.id===parseInt(genreId)));
+  }
+  document.querySelectorAll('.genre-btn').forEach(btn=>btn.classList.replace('bg-red-600','bg-gray-700'));
+  const active=document.querySelector(`.genre-btn[data-genre-id="${genreId}"]`);
+  if(active) active.classList.replace('bg-gray-700','bg-red-600');
+  renderMovies(filtered);
+}
+
+function createGenreButton(genre){
+  const b=document.createElement('button');
+  b.textContent=genre.nombre;
+  b.className='genre-btn bg-gray-700 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-full transition';
+  b.dataset.genreId=genre.id;
+  b.onclick=()=>filterAndRenderMovies(b.dataset.genreId);
+  return b;
+}
+
+function handleFetchError(error,type){
+  console.error(`Error al cargar ${type}:`, error);
+  let containerId, formMessageId, errorMessage;
+  if(type==='géneros'){containerId='genres-container';formMessageId='genre-load-message';errorMessage='Error: No se pudo conectar a la API para cargar los géneros.';}
+  else{containerId='movies-container';formMessageId='no-movies-message';errorMessage='Error al conectar con el servidor de películas.';}
+
+  const container=document.getElementById(containerId);
+  if(container){container.innerHTML=`<span class="text-red-400">${errorMessage} Asegúrate de que el backend esté ejecutándose en http://localhost:8080.</span>`;}
+  const formMsg=document.getElementById(formMessageId);
+  if(formMsg){
+    formMsg.textContent = type==='géneros' ? 'Error: No se pudieron cargar los géneros para el formulario.' : errorMessage;
+    formMsg.classList.remove('hidden'); formMsg.classList.add('text-red-400');
+  }
+  if(type==='géneros') genres=[]; if(type==='películas') movies=[];
+  renderMovies([]);
+}
+
+async function fetchGenres(){
+  try{
+    let headers={};
+    if(isAuthenticated && authUsername && authPassword){
+      const base64=btoa(`${authUsername}:${authPassword}`); headers={'Authorization':`Basic ${base64}`};
+    }
+    const res=await fetch(`${API_URL}/generos`,{headers});
+    if(!res.ok) throw new Error(`Error ${res.status}`);
+    genres=await res.json();
+
+    const cont=document.getElementById('genres-container'); cont.innerHTML='';
+    const allBtn=document.createElement('button');
+    allBtn.textContent='Todos';
+    allBtn.className='genre-btn bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-full transition';
+    allBtn.dataset.genreId='all';
+    allBtn.onclick=()=>filterAndRenderMovies('all');
+    cont.appendChild(allBtn);
+
+    if(Array.isArray(genres)){
+      genres.forEach(g=>{ if(g && g.nombre) cont.appendChild(createGenreButton(g)); });
+    }else{ genres=[]; }
+
+    const selectContainer=document.getElementById('genre-select-container');
+    const selectMsg=document.getElementById('genre-load-message');
+    if(selectContainer){
+      let html=`<select id="genreId" name="genreId" required class="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white">`;
+      if(Array.isArray(genres)){ genres.forEach(g=>{ if(g && g.nombre) html+=`<option value="${g.id}">${g.nombre}</option>`; }); }
+      html+='</select>';
+      selectContainer.innerHTML=html; selectMsg.classList.add('hidden');
+    }
+  }catch(e){ handleFetchError(e,'géneros'); }
+}
+
+async function fetchMovies(){
+  try{
+    let headers={};
+    if(isAuthenticated && authUsername && authPassword){
+      const base64=btoa(`${authUsername}:${authPassword}`); headers={'Authorization':`Basic ${base64}`};
+    }
+    const res=await fetch(`${API_URL}/peliculas`,{headers});
+    if(!res.ok) throw new Error(`Error ${res.status}`);
+    movies=await res.json();
+    if(!Array.isArray(movies)) movies=[];
+    filterAndRenderMovies('all');
+  }catch(e){ handleFetchError(e,'películas'); }
+}
+
+// --- Admin: editar / borrar ---
+function populateEditForm(movie){
+  const form=document.getElementById('movie-form');
+  form.titulo.value=movie.titulo; form.anio.value=movie.anio; form.sinopsis.value=movie.sinopsis; form.rating.value=movie.rating;
+  form.imagenUrl.value=movie.imagenUrl||'';
+  form.genreId.value= movie.generos && movie.generos.length>0 ? movie.generos[0].id : '';
+  currentEditId=movie.id;
+  document.getElementById('cancel-edit-btn').classList.remove('hidden');
+  form.querySelector('button[type="submit"]').textContent='Actualizar Película';
+  document.getElementById('movie-form-section').scrollIntoView({behavior:'smooth'});
+}
+
+async function handleDeleteMovie(id,title){
+  if(!confirm(`¿Eliminar "${title}"?`)) return;
+  if(!isAuthenticated || !authUsername || !authPassword){ showCustomMessage('Debes iniciar sesión como ADMIN.','error'); return; }
+  const base64=btoa(`${authUsername}:${authPassword}`);
+  try{
+    const res=await fetch(`${API_URL}/peliculas/${id}`,{method: 'DELETE',headers:
+    {'Authorization': `Basic ${base64}`},credentials: 'include'});
+    if(res.status===204){ showCustomMessage(`"${title}" eliminada.`,'success'); await fetchMovies(); }
+    else if(res.status===401||res.status===403){ showCustomMessage('No tienes permisos de ADMIN.','error'); }
+    else{ showCustomMessage(`Error ${res.status} al eliminar.`,'error'); }
+  }catch(e){ showCustomMessage('Error de conexión.','error'); }
+}
+
+// ========== CARRITO ==========
+// Añadir película al carrito y actualizar botón
+async function handleBuy(movie, btn) {
+const base64 = btoa(`${authUsername}:${authPassword}`);
+
+const res = await fetch(`${API_URL}/cart/add/${movie.id}`, {
+    method: "POST",
+    headers: { "Authorization": `Basic ${base64}` }
+});
+
+if (res.ok) {
+    btn.textContent = "Añadida ✅";
+    btn.disabled = true;
+    await loadCartFromBackend(); // ⬅ carrito REAL
+    showCustomMessage("Película añadida al carrito", "success");
+} else {
+    showCustomMessage("Error al añadir al carrito", "error");
+}
+}
+
+// Actualiza badge, listado desplegable y visibilidad
+function updateCartUI() {
+const cartItemsList = document.getElementById('cart-items-list');
+const cartTotal = document.getElementById('cart-total');
+const cartBadge = document.getElementById('cart-badge');
+
+// Actualizar contador del carrito
+const itemCount = cart.reduce((total, item) => total + (item.quantity || 1), 0);
+cartBadge.textContent = itemCount;
+cartBadge.style.display = itemCount > 0 ? 'inline-block' : 'none';
+
+if (cart.length === 0) {
+    cartItemsList.innerHTML = '<p class="text-gray-400 py-4 text-center">Tu carrito está vacío</p>';
+    cartTotal.textContent = '0.00€';
+    return;
+}
+
+let total = 0;
+cartItemsList.innerHTML = cart.map(item => {
+    const itemTotal = (item.price || 5.99) * (item.quantity || 1);
+    total += itemTotal;
+    
+    return `
+        <div class="flex justify-between items-center p-2 hover:bg-gray-700 rounded">
+            <div class="flex-1">
+                <p class="text-white">${item.movie?.titulo || 'Película'}</p>
+                <p class="text-gray-400 text-sm">${(item.price || 5.99).toFixed(2)}€ c/u</p>
+            </div>
+                <div class="flex items-center">
+                    <!-- Grupo de botones de cantidad -->
+                    <div class="flex items-center space-x-1">
+                        <button onclick="updateCartItemQuantity(${item.id}, ${(item.quantity || 1) - 1})" 
+                                class="px-2 py-1 bg-gray-600 rounded hover:bg-gray-500">-</button>
+                        <span class="w-8 text-center">${item.quantity || 1}</span>
+                        <button onclick="updateCartItemQuantity(${item.id}, ${(item.quantity || 1) + 1})" 
+                                class="px-2 py-1 bg-gray-600 rounded hover:bg-gray-500">+</button>
+                    </div>
+                    <!-- Botón de eliminar con margen izquierdo -->
+                    <button onclick="removeFromCart(${item.id})" 
+                            class="ml-3 px-3 py-1 bg-red-600 text-white rounded hover:bg-red-500">
+                        ×
+                    </button>
+                </div>
+        </div>
+    `;
+}).join('');
+
+cartTotal.textContent = `${total.toFixed(2)}€`;
+}
+
+async function updateCartItemQuantity(itemId, newQuantity) {
+if (newQuantity < 1) return;
+
+const base64 = btoa(`${authUsername}:${authPassword}`);
+try {
+    const res = await fetch(`${API_URL}/cart/${itemId}/quantity?quantity=${newQuantity}`, {
+        method: 'PUT',
+        headers: { 
+            'Authorization': `Basic ${base64}`,
+            'Content-Type': 'application/json'
+        }
+    });
+    
+    if (res.ok) {
+        await loadCartFromBackend();
+    } else {
+        const error = await res.text();
+        showCustomMessage(error || 'Error al actualizar la cantidad', 'error');
+    }
+} catch (e) {
+    console.error('Error al actualizar cantidad:', e);
+    showCustomMessage('Error de conexión', 'error');
+}
+}
+
+function syncBuyButtonsWithCart() {
+  // Si el carrito viene del backend: item.movie.id
+  const idsEnCarrito = new Set(
+    cart.map(item => item.movie ? item.movie.id : item.id) // por si aún usas formato antiguo
+  );
+
+  document.querySelectorAll('.buy-btn').forEach(btn => {
+    const movieId = Number(btn.dataset.movieId);
+
+    if (idsEnCarrito.has(movieId)) {
+      btn.textContent = 'Añadida ✅';
+      btn.disabled = true;
+    } else {
+      btn.textContent = 'Comprar Película';
+      btn.disabled = false;
+    }
+  });
+}
+
+
+// Eliminar del carrito por índice y refrescar badge/lista
+async function removeFromCart(cartItemId) {
+const base64 = btoa(`${authUsername}:${authPassword}`);
+
+const res = await fetch(`${API_URL}/cart/${cartItemId}`, {
+    method: "DELETE",
+    headers: { "Authorization": `Basic ${base64}` }
+});
+
+if (res.ok) {
+    await loadCartFromBackend(); // actualiza carrito REAL
+    showCustomMessage("Artículo eliminado del carrito", "success");
+} else {
+    showCustomMessage("Error al eliminar del carrito", "error");
+}
+}
+
+// Finalizar compra -> backend /orders/checkout
+async function checkout(){
+  if(cart.length === 0) {
+    showCustomMessage('El carrito está vacío', 'info');
+    return;
+  }
+
+  try {
+    const base64 = btoa(`${authUsername}:${authPassword}`);
+    const res = await fetch(`${API_URL}/orders/checkout`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${base64}`,
+        'Content-Type': 'application/json'
+      },
+      credentials: 'include'
+    });
+
+    const result = await res.json();
+
+    if(res.ok) {
+      // Vaciar el carrito solo después de una compra exitosa
+      cart = [];
+      updateCartUI();
+      // Recargar el carrito desde el backend para asegurar consistencia
+      await loadCartFromBackend();
+      // Re-activar botones de compra en las tarjetas
+      document.querySelectorAll('.buy-btn').forEach(b => {
+        b.textContent = 'Comprar Película';
+        b.disabled = false;
+      });
+      showCustomMessage(result.message || 'Compra realizada con éxito', 'success');
+    } else {
+      showCustomMessage(result || 'Error al procesar la compra', 'error');
+    }
+  } catch(e) {
+    console.error('Error en checkout:', e);
+    showCustomMessage('Error de conexión: ' + e.message, 'error');
+  }
+}
+
+async function loadCartFromBackend() {
+const base64 = btoa(`${authUsername}:${authPassword}`);
+
+const res = await fetch(`${API_URL}/cart`, {
+    headers: { "Authorization": `Basic ${base64}` }
+});
+
+if (res.ok) {
+    cart = await res.json();   // carrito real
+    updateCartUI();
+    syncBuyButtonsWithCart();  // ⬅ sincroniza botones
+}
+}
+
+// Toggle del desplegable del carrito
+document.addEventListener('click', (ev)=>{
+  const cartContainer = document.getElementById('cart-container');
+  const dd=document.getElementById('cart-dropdown');
+  const btn=document.getElementById('cart-btn');
+  if(btn && btn.contains(ev.target)){
+    dd.style.display = (dd.style.display==='block'?'none':'block');
+  }else if(cartContainer && !cartContainer.contains(ev.target)){
+    dd.style.display='none';
+  }
+});
+
+// Event Listeners
+document.addEventListener('click',(e)=>{
+    if(e.target.matches('.movie-card, .movie-card *')){
+        const card=e.target.closest('.movie-card');
+        if(card && card.dataset.movieId) showMovieDetails(card.dataset.movieId);
+    }
+});
+
+// Backup button click handler
+document.getElementById('backup-btn').addEventListener('click', handleBackup);
+
+// --- Backup Functionality ---
+async function handleBackup() {
+    const backupBtn = document.getElementById('backup-btn');
+    const backupSpinner = document.getElementById('backup-spinner');
+    const originalText = backupBtn.innerHTML;
+    
+    if (!isAuthenticated || !authUsername || !authPassword) {
+        showCustomMessage('Debes iniciar sesión como administrador para realizar copias de seguridad.', 'error');
+        return;
+    }
+
+    try {
+        // Disable button and show spinner
+        backupBtn.disabled = true;
+        backupSpinner.classList.remove('hidden');
+        backupBtn.querySelector('span').textContent = 'Procesando...';
+
+        const base64 = btoa(`${authUsername}:${authPassword}`);
+        const response = await fetch(`${API_URL}/admin/backup`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Basic ${base64}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+
+        // Get filename from Content-Disposition header
+        const contentDisposition = response.headers.get('Content-Disposition');
+        const filename = contentDisposition
+            ? contentDisposition.split('filename=')[1].replace(/"/g, '')
+            : `backup_${new Date().toISOString().split('T')[0]}.zip`;
+
+        // Create blob from response and trigger download
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        
+        // Cleanup
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        showCustomMessage('Copia de seguridad generada con éxito', 'success');
+    } catch (error) {
+        console.error('Backup error:', error);
+        showCustomMessage(`Error al generar la copia de seguridad: ${error.message}`, 'error');
+    } finally {
+        // Re-enable button and restore original state
+        backupBtn.disabled = false;
+        backupSpinner.classList.add('hidden');
+        backupBtn.querySelector('span').textContent = 'Generar Copia de Seguridad';
+    }
+}
+
+// Función para actualizar la vista previa de la imagen
+function updateImagePreview(input) {
+    const file = input.files[0];
+    const previewImg = document.getElementById('image-preview-img');
+    const previewContainer = document.getElementById('image-preview');
+    const fileNameSpan = document.getElementById('selected-file-name');
+    
+    if (file) {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            previewContainer.classList.remove('hidden');
+        };
+        
+        reader.readAsDataURL(file);
+        
+        // Mostrar solo el nombre del archivo, no la ruta completa
+        const fileName = file.name;
+        fileNameSpan.textContent = fileName;
+        
+        // Actualizar el campo oculto con el nombre del archivo
+        document.getElementById('imagenUrl').value = fileName;
+    } else {
+        previewContainer.classList.add('hidden');
+        fileNameSpan.textContent = '';
+        document.getElementById('imagenUrl').value = '';
+    }
+}
+
+// Validar año de la película
+function validateYear(input) {
+    const year = input.value;
+    const errorElement = document.getElementById('year-error');
+    
+    if (year.length < 3 || year.length > 4) {
+        input.classList.add('border-red-500');
+        errorElement.classList.remove('hidden');
+        input.setCustomValidity('El año debe tener entre 3 y 4 dígitos');
+    } else {
+        input.classList.remove('border-red-500');
+        errorElement.classList.add('hidden');
+        input.setCustomValidity('');
+    }
+}
+
+// --- Inicialización ---
+document.addEventListener('DOMContentLoaded', () => {
+  // Inicializar la UI
+  updateUI(null, false);
+
+  // Configurar manejadores de eventos de autenticación
+  const openLoginBtn = document.getElementById('open-login-btn');
+  const openRegisterBtn = document.getElementById('open-register-btn');
+  const loginForm = document.getElementById('login-form');
+  const registerForm = document.getElementById('register-form');
+  
+  if (openLoginBtn) {
+    openLoginBtn.addEventListener('click', () => openModal('login-modal'));
+  }
+  
+  if (openRegisterBtn) {
+    openRegisterBtn.addEventListener('click', () => openModal('register-modal'));
+  }
+  
+  if (loginForm) {
+    loginForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      handleLogin();
+    });
+  }
+  
+  if (registerForm) {
+    registerForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      handleRegister();
+    });
+  }
+  
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', handleLogout);
+  }
+
+  // Configurar formulario de películas
+  const movieForm = document.getElementById('movie-form');
+  if (movieForm) {
+    movieForm.addEventListener('submit', handleMovieFormSubmit);
+    const cancelEditBtn = document.getElementById('cancel-edit-btn');
+    if (cancelEditBtn) {
+      cancelEditBtn.addEventListener('click', resetMovieForm);
+    }
+  }
+});

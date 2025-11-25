@@ -31,26 +31,26 @@ public class SecurityConfig {
 
                 // Permite que la consola H2 funcione dentro de un iframe
                 .headers(headers -> headers
-                        .frameOptions(frame -> frame.sameOrigin())
-                )
+                        .frameOptions(frame -> frame.sameOrigin()))
                 .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/", "/index.html", "/static/**", "/css/**", "/js/**", "/images/**",
-                    "/h2-console/**").permitAll()
+                        .requestMatchers("/", "/index.html", "/styles.css", "/script.js", "/static/**", "/css/**",
+                                "/js/**", "/images/**",
+                                "/h2-console/**")
+                        .permitAll()
 
-                    .requestMatchers("/login").permitAll()
-                    .requestMatchers(HttpMethod.POST, "/api/v1/registro").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/v1/peliculas", "/api/v1/generos").permitAll()
+                        .requestMatchers("/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/registro").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/peliculas", "/api/v1/generos").permitAll()
 
-                    // ADMIN
-                    .requestMatchers(HttpMethod.POST, "/api/v1/peliculas").hasRole("ADMIN")
-                    .requestMatchers(HttpMethod.PUT, "/api/v1/peliculas/**").hasRole("ADMIN")
-                    .requestMatchers(HttpMethod.DELETE, "/api/v1/peliculas/**").hasRole("ADMIN")
-                    .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        // ADMIN
+                        .requestMatchers(HttpMethod.POST, "/api/v1/peliculas").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/peliculas/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/peliculas/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
 
-                    .requestMatchers("/api/v1/cart/**", "/api/v1/orders/**").authenticated()
+                        .requestMatchers("/api/v1/cart/**", "/api/v1/orders/**").authenticated()
 
-                    .anyRequest().authenticated()
-                )
+                        .anyRequest().authenticated())
                 // Autenticación por HTTP Basic (para tus fetch con Authorization: Basic ...)
                 .httpBasic(Customizer.withDefaults())
 

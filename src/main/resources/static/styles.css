@@ -1,0 +1,26 @@
+body{font-family:'Inter',sans-serif;background-color:#141414;color:#E5E5E5}
+.header{background-color:#141414;z-index:10}
+.movie-card{transition:transform .3s, box-shadow .3s}
+.movie-card:hover{transform:scale(1.05);box-shadow:0 10px 20px rgba(0,0,0,.6)}
+.modal{background-color:rgba(0,0,0,.85);z-index:50}
+.modal input,.modal textarea{background:#333;color:#fff;border:1px solid #444}
+.animate-pulse-slow{animation:pulse 4s cubic-bezier(.4,0,.6,1) infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.8}}
+
+/* Carrito */
+#cart-container{position:relative}
+#cart-btn{position:relative}
+#cart-badge{
+  position:absolute; right:-6px; bottom:-6px;
+  min-width:18px; height:18px; padding:0 4px;
+  background:#dc2626; color:#fff; border-radius:9999px;
+  font-size:11px; line-height:18px; text-align:center; display:none;
+}
+#cart-dropdown{
+  position:absolute; left:0; top:100%;
+  background:#2d2d2d; border-radius:10px; box-shadow:0 8px 16px rgba(0,0,0,.5);
+  width:340px; padding:12px; display:none;
+}
+.cart-item{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #444;padding:6px 0}
+.cart-item-title{font-size:.9rem}
+.cart-total{font-weight:700;margin-top:10px}
