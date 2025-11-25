@@ -323,6 +323,93 @@ function handleFetchError(error,type){
   renderMovies([]);
 }
 
+async function addGenre() {
+  const newGenreInput = document.getElementById('new-genre');
+  const genreName = newGenreInput.value.trim();
+  const messageElement = document.getElementById('genre-message');
+  
+  // Reset message
+  messageElement.textContent = '';
+  messageElement.className = 'text-sm mt-1 hidden';
+  
+  // Validation
+  if (!genreName) {
+    messageElement.textContent = 'El nombre del género no puede estar vacío';
+    messageElement.classList.remove('hidden', 'text-green-400');
+    messageElement.classList.add('text-red-400');
+    return;
+  }
+  
+  if (genreName.length > 25) {
+    messageElement.textContent = 'El nombre del género no puede tener más de 25 caracteres';
+    messageElement.classList.remove('hidden', 'text-green-400');
+    messageElement.classList.add('text-red-400');
+    return;
+  }
+  
+  // Check if genre already exists
+  const genreExists = genres.some(g => g.nombre.toLowerCase() === genreName.toLowerCase());
+  if (genreExists) {
+    messageElement.textContent = 'Este género ya existe';
+    messageElement.classList.remove('hidden', 'text-green-400');
+    messageElement.classList.add('text-yellow-400');
+    return;
+  }
+  
+  try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (isAuthenticated && authUsername && authPassword) {
+      const base64 = btoa(`${authUsername}:${authPassword}`);
+      headers['Authorization'] = `Basic ${base64}`;
+    }
+    
+    const response = await fetch(`${API_URL}/generos`, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({ nombre: genreName })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Error ${response.status}: ${response.statusText}`);
+    }
+    
+    const newGenre = await response.json();
+    
+    // Add to local genres array
+    genres.push(newGenre);
+    
+    // Update genre select dropdown
+    const select = document.querySelector('#genre-select-container select');
+    if (select) {
+      const option = document.createElement('option');
+      option.value = newGenre.id;
+      option.textContent = newGenre.nombre;
+      select.appendChild(option);
+      select.value = newGenre.id; // Select the newly added genre
+    }
+    
+    // Update genres filter buttons
+    const genresContainer = document.getElementById('genres-container');
+    if (genresContainer) {
+      genresContainer.appendChild(createGenreButton(newGenre));
+    }
+    
+    // Show success message
+    messageElement.textContent = `Género "${genreName}" añadido correctamente`;
+    messageElement.classList.remove('hidden', 'text-red-400', 'text-yellow-400');
+    messageElement.classList.add('text-green-400');
+    
+    // Clear input
+    newGenreInput.value = '';
+    
+  } catch (error) {
+    console.error('Error adding genre:', error);
+    messageElement.textContent = 'Error al añadir el género. Por favor, inténtalo de nuevo.';
+    messageElement.classList.remove('hidden', 'text-green-400');
+    messageElement.classList.add('text-red-400');
+  }
+}
+
 async function fetchGenres(){
   try{
     let headers={};
@@ -333,17 +420,20 @@ async function fetchGenres(){
     if(!res.ok) throw new Error(`Error ${res.status}`);
     genres=await res.json();
 
-    const cont=document.getElementById('genres-container'); cont.innerHTML='';
-    const allBtn=document.createElement('button');
-    allBtn.textContent='Todos';
-    allBtn.className='genre-btn bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-full transition';
-    allBtn.dataset.genreId='all';
-    allBtn.onclick=()=>filterAndRenderMovies('all');
-    cont.appendChild(allBtn);
+    const cont=document.getElementById('genres-container'); 
+    if (cont) {
+      cont.innerHTML='';
+      const allBtn=document.createElement('button');
+      allBtn.textContent='Todos';
+      allBtn.className='genre-btn bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-full transition';
+      allBtn.dataset.genreId='all';
+      allBtn.onclick=()=>filterAndRenderMovies('all');
+      cont.appendChild(allBtn);
 
-    if(Array.isArray(genres)){
-      genres.forEach(g=>{ if(g && g.nombre) cont.appendChild(createGenreButton(g)); });
-    }else{ genres=[]; }
+      if(Array.isArray(genres)){
+        genres.forEach(g=>{ if(g && g.nombre) cont.appendChild(createGenreButton(g)); });
+      }else{ genres=[]; }
+    }
 
     const selectContainer=document.getElementById('genre-select-container');
     const selectMsg=document.getElementById('genre-load-message');
@@ -351,9 +441,13 @@ async function fetchGenres(){
       let html=`<select id="genreId" name="genreId" required class="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white">`;
       if(Array.isArray(genres)){ genres.forEach(g=>{ if(g && g.nombre) html+=`<option value="${g.id}">${g.nombre}</option>`; }); }
       html+='</select>';
-      selectContainer.innerHTML=html; selectMsg.classList.add('hidden');
+      selectContainer.innerHTML=html; 
+      if (selectMsg) selectMsg.classList.add('hidden');
     }
-  }catch(e){ handleFetchError(e,'géneros'); }
+  }catch(e){ 
+    console.error('Error fetching genres:', e);
+    handleFetchError(e,'géneros'); 
+  }
 }
 
 async function fetchMovies(){
@@ -713,6 +807,23 @@ function validateYear(input) {
 
 // --- Inicialización ---
 document.addEventListener('DOMContentLoaded', () => {
+  // Set up add genre button
+  const addGenreBtn = document.getElementById('add-genre-btn');
+  const newGenreInput = document.getElementById('new-genre');
+  
+  if (addGenreBtn) {
+    addGenreBtn.addEventListener('click', addGenre);
+  }
+  
+  if (newGenreInput) {
+    newGenreInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addGenre();
+      }
+    });
+  }
+  
   // Inicializar la UI
   updateUI(null, false);
 
