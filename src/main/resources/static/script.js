@@ -260,6 +260,7 @@ function showCustomMessage(text,type='info'){
 function createMovieCard(movie){
   const card=document.createElement('div');
   card.className='movie-card bg-gray-900 rounded-lg overflow-hidden relative';
+  card.dataset.movieId = movie.id;
   const imageFileName=movie.imagenUrl;
   const imageUrl=imageFileName?`images/${imageFileName}`:null;
   const placeholder='images/placeholder.png';
@@ -303,10 +304,14 @@ function createMovieCard(movie){
   }
 
   // Botón comprar (solo USER)
-  if(isAuthenticated && authUsername && authUsername!=='Pedro'){
-    const buyBtn=card.querySelector('.buy-btn');
+  if (isAuthenticated && authUsername && authUsername !== 'Pedro') {
+    const buyBtn = card.querySelector('.buy-btn');
     buyBtn.classList.remove('hidden');
-    buyBtn.onclick=()=>handleBuy(movie, buyBtn);
+
+    buyBtn.onclick = (e) => {
+      e.stopPropagation();
+      handleBuy(movie, buyBtn);
+    };
   }
 
   return card;
@@ -842,6 +847,47 @@ function validateYear(input) {
         errorElement.classList.add('hidden');
         input.setCustomValidity('');
     }
+}
+
+async function showMovieDetails(movieId) {
+  try {
+    const base64 = authUsername && authPassword
+      ? btoa(`${authUsername}:${authPassword}`)
+      : null;
+
+    const res = await fetch(`${API_URL}/peliculas/${movieId}`, {
+      headers: base64 ? { 'Authorization': `Basic ${base64}` } : {}
+    });
+
+    if (!res.ok) {
+      showCustomMessage("No se pudieron cargar los detalles.", "error");
+      return;
+    }
+
+    const movie = await res.json();
+
+    // Rellenar texto del modal
+    document.getElementById("details-title").textContent = movie.titulo;
+    document.getElementById("details-year-genre").textContent =
+      `${movie.anio} | ${movie.generos.map(g => g.nombre).join(", ")}`;
+    document.getElementById("details-rating").textContent = `⭐ ${movie.rating} / 10`;
+    document.getElementById("details-sinopsis").textContent = movie.sinopsis;
+
+    // OCULTAR SIEMPRE el botón de comprar (solo info)
+    const buyBtn = document.getElementById("details-buy");
+    buyBtn.classList.add("hidden");
+    buyBtn.onclick = null; // evitar conflictos
+
+    // Mostrar modal
+    document.getElementById("movie-details-modal").classList.remove("hidden");
+
+  } catch (e) {
+    showCustomMessage("Error cargando la película.", "error");
+  }
+}
+
+function closeMovieDetails() {
+  document.getElementById("movie-details-modal").classList.add("hidden");
 }
 
 // --- Inicialización ---
