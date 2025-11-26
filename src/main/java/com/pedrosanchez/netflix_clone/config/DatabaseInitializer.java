@@ -48,14 +48,24 @@ public class DatabaseInitializer implements CommandLineRunner {
         final String encodedPassword = passwordEncoder.encode(rawPassword);
 
         userRepository.findByUsername("Pedro").ifPresentOrElse(user -> {
-            // Si el usuario ya existe, actualizamos su contraseña y rol
+            // Actualizar contraseña
             user.setPassword(encodedPassword);
-            user.setRole("ADMIN");
+
+            // Actualizar roles
+            user.getRoles().clear();
+            user.getRoles().add("ROLE_ADMIN");
+            user.getRoles().add("ROLE_USER");
+
             userRepository.save(user);
             System.out.println("Usuario admin actualizado: Pedro");
+
         }, () -> {
-            // Si no existe, lo creamos
-            userRepository.save(new User("Pedro", encodedPassword, "ADMIN"));
+            // Crear nuevo administrador
+            User admin = new User("Pedro", encodedPassword);
+            admin.getRoles().add("ROLE_ADMIN");
+            admin.getRoles().add("ROLE_USER");
+
+            userRepository.save(admin);
             System.out.println("Usuario admin creado: Pedro");
         });
     }

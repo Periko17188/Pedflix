@@ -1,14 +1,13 @@
 package com.pedrosanchez.netflix_clone.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+
+import java.util.HashSet;
+import java.util.Set;
 
 // Entidad que representa un usuario de la aplicación.
 @Data
@@ -27,6 +26,6 @@ public class User {
     private String username;
     @NonNull
     private String password;
-    @NonNull
-    private String role;
+    @ElementCollection(fetch = FetchType.EAGER)
+    private Set<String> roles = new HashSet<>();
 }

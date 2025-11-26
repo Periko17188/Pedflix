@@ -10,7 +10,7 @@ import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import java.util.Set;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -61,7 +61,7 @@ public class AdminServiceImpl implements AdminService {
             // Backup de usuarios (excluyendo datos sensibles)
             List<User> users = userRepository.findAll();
             String usersJson = objectMapper.writeValueAsString(users.stream()
-                    .map(user -> new UserInfo(user.getId(), user.getUsername(), user.getRole()))
+                    .map(user -> new UserInfo(user.getId(), user.getUsername(), user.getRoles()))
                     .toList());
             addToZip(zos, "usuarios.json", usersJson);
 
@@ -105,6 +105,6 @@ public class AdminServiceImpl implements AdminService {
     private static class UserInfo {
         private Long id;
         private String username;
-        private String role;
+        private Set<String> roles;
     }
 }

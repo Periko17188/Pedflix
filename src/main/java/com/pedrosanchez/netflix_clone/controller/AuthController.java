@@ -1,18 +1,19 @@
 package com.pedrosanchez.netflix_clone.controller;
 
 import com.pedrosanchez.netflix_clone.dto.UserRegisterDTO;
-import com.pedrosanchez.netflix_clone.exception.NotFoundException;
 import com.pedrosanchez.netflix_clone.model.User;
 import com.pedrosanchez.netflix_clone.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+import java.util.HashMap;
+import java.util.Map;
 
-// Controlador que gestiona el registro de nuevos usuarios
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
@@ -21,30 +22,42 @@ public class AuthController {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    // Metodo que registra un nuevo usuario en el sistema
+    // REGISTRO DE USUARIO NORMAL (ROLE_USER)
     @PostMapping("/registro")
     public ResponseEntity<?> registerUser(@Valid @RequestBody UserRegisterDTO dto) {
 
-        // Comprueba si el nombre de usuario ya existe
         if (userRepository.findByUsername(dto.getUsername()).isPresent()) {
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
                     .body("El usuario ya existe");
         }
 
-        // Codifica la contraseña
-        String encodedPassword = passwordEncoder.encode(dto.getPassword());
-
-        // Crea el nuevo usuario usando el DTO
         User newUser = new User(
                 dto.getUsername(),
-                encodedPassword,
-                "USER"
+                passwordEncoder.encode(dto.getPassword())
         );
 
-        // Guarda el usuario
+        // Rol del usuario normal
+        newUser.getRoles().add("ROLE_USER");
+
         User savedUser = userRepository.save(newUser);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(savedUser);
+    }
+
+
+    // NUEVO ENDPOINT: DEVOLVER USUARIO ACTUAL + ROLES
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser(Authentication auth) {
+
+        if (auth == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("username", auth.getName());
+        data.put("roles", auth.getAuthorities());
+
+        return ResponseEntity.ok(data);
     }
 }

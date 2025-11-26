@@ -25,38 +25,46 @@ function closeModal(id){
 }
 
 // --- UI según sesión ---
-function updateUI(user, logged=false){
-  const openLogin=document.getElementById('open-login-btn');
-  const openRegister=document.getElementById('open-register-btn');
-  const logoutBtn=document.getElementById('logout-btn');
-  const userDisplay=document.getElementById('user-display');
-  const movieFormSection=document.getElementById('movie-form-section');
-  const splash=document.getElementById('splash-screen');
-  const main=document.getElementById('main-content');
-  const cartContainer=document.getElementById('cart-container');
+function updateUI(user, logged = false, roles = []) {
+  const openLogin = document.getElementById('open-login-btn');
+  const openRegister = document.getElementById('open-register-btn');
+  const logoutBtn = document.getElementById('logout-btn');
+  const userDisplay = document.getElementById('user-display');
+  const movieFormSection = document.getElementById('movie-form-section');
+  const splash = document.getElementById('splash-screen');
+  const main = document.getElementById('main-content');
+  const cartContainer = document.getElementById('cart-container');
 
   isAuthenticated = logged;
   authUsername = user || null;
+  window.userRoles = roles || [];
 
-  if(logged){
-    splash.classList.add('hidden'); main.classList.remove('hidden');
-    openLogin.classList.add('hidden'); openRegister.classList.add('hidden');
+  if (logged) {
+    const isAdmin = roles.includes("ROLE_ADMIN");
+
+    splash.classList.add('hidden');
+    main.classList.remove('hidden');
+    openLogin.classList.add('hidden');
+    openRegister.classList.add('hidden');
     logoutBtn.classList.remove('hidden');
-    userDisplay.textContent = `Bienvenida, ${user}`; // texto solicitado
+
+    userDisplay.textContent = `Bienvenida, ${user}`;
     userDisplay.classList.remove('hidden');
 
-    // Mostrar controles de admin solo para Pedro
-    const isAdmin = user === 'Pedro';
+    // ADMIN: mostrar panel admin
     movieFormSection?.classList.toggle('hidden', !isAdmin);
     document.getElementById('admin-controls')?.classList.toggle('hidden', !isAdmin);
 
-    // Carrito: solo usuarios normales (no admin)
+    // USER: mostrar carrito
     cartContainer.classList.toggle('hidden', isAdmin);
 
-  }else{
-    splash.classList.remove('hidden'); main.classList.add('hidden');
-    openLogin.classList.remove('hidden'); openRegister.classList.remove('hidden');
-    logoutBtn.classList.add('hidden'); userDisplay.classList.add('hidden');
+  } else {
+    splash.classList.remove('hidden');
+    main.classList.add('hidden');
+    openLogin.classList.remove('hidden');
+    openRegister.classList.remove('hidden');
+    logoutBtn.classList.add('hidden');
+    userDisplay.classList.add('hidden');
     movieFormSection?.classList.add('hidden');
     document.getElementById('cart-container').classList.add('hidden');
   }
@@ -70,30 +78,61 @@ function handleLogout(){
 }
 
 // --- Login / Registro ---
-async function handleLogin(){
-  const username=document.getElementById('login-username').value;
-  const password=document.getElementById('login-password').value;
-  const msg=document.getElementById('login-message');
+async function handleLogin() {
+  const username = document.getElementById('login-username').value;
+  const password = document.getElementById('login-password').value;
+  const msg = document.getElementById('login-message');
   msg.classList.add('hidden');
-  const base64=btoa(`${username}:${password}`);
 
-  try{
-    const res=await fetch(`${API_URL}/peliculas`,{headers:{'Authorization':`Basic ${base64}`}});
+  const base64 = btoa(`${username}:${password}`);
 
-    if(res.ok){
-      authUsername=username; authPassword=password;
-      updateUI(username,true);
-      closeModal('login-modal');
-      await fetchGenres();
-      await fetchMovies();
-      showCustomMessage(`¡Inicio de sesión exitoso! Bienvenida, ${username}.`,'success');
-    }else if(res.status===401){
-      msg.textContent='Usuario o contraseña incorrectos.'; msg.classList.remove('hidden');
-    }else{
-      msg.textContent='Error desconocido al iniciar sesión.'; msg.classList.remove('hidden');
+  try {
+    // 1. Verificar credenciales con un endpoint público
+    const res = await fetch(`${API_URL}/peliculas`, {
+      headers: { 'Authorization': `Basic ${base64}` }
+    });
+
+    if (!res.ok) {
+      msg.textContent = res.status === 401
+        ? 'Usuario o contraseña incorrectos.'
+        : 'Error desconocido al iniciar sesión.';
+      msg.classList.remove('hidden');
+      return;
     }
-  }catch(err){
-    msg.textContent='Error de conexión con el servidor.'; msg.classList.remove('hidden');
+
+    // 2. Guardamos credenciales
+    authUsername = username;
+    authPassword = password;
+
+    // 3. Obtener roles reales desde el backend
+    const meRes = await fetch(`${API_URL}/me`, {
+      headers: { 'Authorization': `Basic ${base64}` }
+    });
+
+    if (!meRes.ok) {
+      msg.textContent = 'No se pudo obtener tu información.';
+      msg.classList.remove('hidden');
+      return;
+    }
+
+    const me = await meRes.json();
+    const roles = me.roles.map(r => r.authority);
+
+    // Guardar roles globalmente
+    window.userRoles = roles;
+
+    // 4. Actualizar UI con roles reales
+    updateUI(username, true, roles);
+
+    closeModal('login-modal');
+    await fetchGenres();
+    await fetchMovies();
+
+    showCustomMessage(`¡Inicio de sesión exitoso! Bienvenida, ${username}.`, 'success');
+
+  } catch (err) {
+    msg.textContent = 'Error de conexión con el servidor.';
+    msg.classList.remove('hidden');
   }
 }
 
@@ -244,7 +283,7 @@ function createMovieCard(movie){
   `;
 
   // Botones admin (Pedro)
-  if(authUsername==='Pedro'){
+   if (window.userRoles && window.userRoles.includes('ROLE_ADMIN')) {
     const adminDiv=card.querySelector('.admin-buttons');
     adminDiv.classList.remove('hidden');
 
@@ -794,7 +833,7 @@ function validateYear(input) {
     const year = input.value;
     const errorElement = document.getElementById('year-error');
     
-    if (year.length < 3 || year.length > 4) {
+    if ((year.length !== 4)) {
         input.classList.add('border-red-500');
         errorElement.classList.remove('hidden');
         input.setCustomValidity('El año debe tener entre 3 y 4 dígitos');

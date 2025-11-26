@@ -3,42 +3,51 @@ package com.pedrosanchez.netflix_clone.service;
 import com.pedrosanchez.netflix_clone.model.User;
 import com.pedrosanchez.netflix_clone.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-import java.util.Optional;
 
-// Servicio que permite a Spring Security obtener la información de un usuario desde la base de datos
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 public class JpaUserDetailsService implements UserDetailsService {
 
     private final UserRepository userRepository;
 
-    // Carga los datos de un usuario por su nombre de usuario
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        Optional<User> userOptional = userRepository.findByUsername(username);
 
-        // Si el usuario no existe, lanza una excepción estándar de Spring Security
+        // Buscar usuario en BD
+        Optional<User> userOptional = userRepository.findByUsername(username);
         if (userOptional.isEmpty()) {
             throw new UsernameNotFoundException("Usuario no encontrado: " + username);
         }
 
         User user = userOptional.get();
 
-        // Normaliza el rol para evitar duplicar ROLE_
-        String role = user.getRole();
-        if (!role.startsWith("ROLE_")) {
-            role = "ROLE_" + role;
-        }
+        // Convertir roles (String) → GrantedAuthority
+        Set<GrantedAuthority> authorities = user.getRoles()
+                .stream()
+                .map(role -> {
+                    // Asegurar formato ROLE_XXXX
+                    if (!role.startsWith("ROLE_")) {
+                        role = "ROLE_" + role;
+                    }
+                    return new SimpleGrantedAuthority(role);
+                })
+                .collect(Collectors.toSet());
 
-        // Devuelve un objeto UserDetails con los datos que Spring Security necesita
+        // Crear un UserDetails válido para Spring Security
         return org.springframework.security.core.userdetails.User.builder()
                 .username(user.getUsername())
                 .password(user.getPassword())
-                .authorities(role)
+                .authorities(authorities)
                 .build();
     }
 }
