@@ -332,19 +332,24 @@ function createMovieCard(movie){
   const placeholder='images/placeholder.png';
   const genreName=(movie.generos && movie.generos.length>0)?movie.generos[0].nombre:'Desconocido';
 
-  card.innerHTML=`
-    <img src="${imageUrl?imageUrl:placeholder}" alt="${movie.titulo}"
+  card.innerHTML = `
+    <img src="${imageUrl ? imageUrl : placeholder}"
+         alt="${movie.titulo}"
          onerror="this.onerror=null; this.src='${placeholder}';"
-         class="w-full h-auto object-cover rounded-t-lg aspect-[2/3]">
+         class="movie-card-img w-full h-auto object-cover rounded-t-lg aspect-[2/3]">
+
     <div class="p-4">
       <h4 class="text-lg font-bold truncate">${movie.titulo}</h4>
       <p class="text-sm text-gray-400">${movie.anio} | ${genreName}</p>
-      <p class="text-sm text-yellow-500 mt-1">⭐ ${movie.rating!=null?movie.rating.toFixed(1):'N/A'} / 10</p>
+      <p class="text-sm text-yellow-500 mt-1">⭐ ${movie.rating != null ? movie.rating.toFixed(1) : 'N/A'} / 10</p>
+
       <div class="mt-3 flex items-center justify-between">
-      <button
-          class="buy-btn bg-red-600 hover:bg-red-700 text-white text-sm font-semibold py-1 px-3 rounded transition hidden"
-          data-movie-id="${movie.id}">Comprar Película
-        </button>            <div class="admin-buttons space-x-2 hidden"></div>
+        <button
+            class="buy-btn bg-red-600 hover:bg-red-700 text-white text-sm font-semibold py-1 px-3 rounded transition hidden"
+            data-movie-id="${movie.id}">
+          Comprar Película
+        </button>
+        <div class="admin-buttons space-x-2 hidden"></div>
       </div>
     </div>
   `;
@@ -799,10 +804,12 @@ document.addEventListener('click', (ev)=>{
 });
 
 // Event Listeners
-document.addEventListener('click',(e)=>{
-    if(e.target.matches('.movie-card, .movie-card *')){
-        const card=e.target.closest('.movie-card');
-        if(card && card.dataset.movieId) showMovieDetails(card.dataset.movieId);
+document.addEventListener('click', (e) => {
+    if (e.target.matches('.movie-card-img')) {
+        const card = e.target.closest('.movie-card');
+        if (card && card.dataset.movieId) {
+            showMovieDetails(card.dataset.movieId);
+        }
     }
 });
 
