@@ -23,6 +23,8 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
+
+                .requiresChannel(channel -> channel.anyRequest().requiresSecure())
                 .userDetailsService(jpaUserDetailsService)
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())

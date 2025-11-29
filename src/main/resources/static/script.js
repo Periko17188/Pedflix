@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:8080/api/v1';
+const API_URL = `${window.location.origin}/api/v1`;
 
 // Estado global
 let movies = [];
